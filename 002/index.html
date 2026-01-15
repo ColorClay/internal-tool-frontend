@@ -14,7 +14,7 @@
     <main class="container">
       <section class="card">
         <h2 class="sutitle">점검 등록</h2>
-        <form class="form">
+        <form class="form" id="checkForm">
           <div class="field">
             <label for="equipment">설비명</label>
             <input type="text" id="equipment" name="equipment" />
@@ -33,11 +33,12 @@
           </div>
           <div class="field">
             <label for="memo">비고</label>
-            <textarea name="memo" id="meomo" rows="4"></textarea>
+            <textarea name="memo" id="memo" rows="4"></textarea>
           </div>
           <button class="btn" type="submit">저장</button>
         </form>
       </section>
     </main>
+    <script src="./script.js"></script>
   </body>
 </html>
