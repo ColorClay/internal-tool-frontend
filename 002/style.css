@@ -84,3 +84,27 @@ button {
 .message.success {
   color: #0a7a0a;
 }
+
+.login-buttons {
+  display: flex;
+  gap: 8px;
+  margin: 8px auto;
+}
+
+.login-hint {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.result-box {
+  min-height: 24px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.result-ok {
+  background-color: #ffecec;
+  color: #aa2222;
+}
