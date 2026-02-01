@@ -2,6 +2,7 @@ console.log('스크립트 연결 완료');
 // index 에서만 적용
 const form = document.getElementById('checkForm');
 const messageEl = document.getElementById('message');
+
 if (form && messageEl) {
   form.addEventListener('submit', function (event) {
     event.preventDefault();
@@ -52,13 +53,15 @@ function showLoginResult(message, isOk) {
   if (!loginResultBox) return;
   loginResultBox.textContent = message;
   loginResultBox.classList.remove('result-ok', 'result-error');
-  if (isOk) {
-    loginResultBox.classList.add('result-ok');
-  } else {
-    loginResultBox.classList.add('result-error');
-  }
+  loginResultBox.classList.add(isOk ? 'result-ok' : 'result-error');
 }
-if (btnOrCheck && btnAndCheck && userIdInput && passwordInput && loginResultBox)
+if (
+  btnOrCheck &&
+  btnAndCheck &&
+  userIdInput &&
+  passwordInput &&
+  loginResultBox
+) {
   btnOrCheck.addEventListener('click', () => {
     const userId = userIdInput.value.trim();
     const password = passwordInput.value.trim();
@@ -76,22 +79,43 @@ if (btnOrCheck && btnAndCheck && userIdInput && passwordInput && loginResultBox)
     }
   });
 
-btnAndCheck.addEventListener('click', () => {
-  const userId = userIdInput.value.trim();
-  const password = passwordInput.value.trim();
+  btnAndCheck.addEventListener('click', () => {
+    const userId = userIdInput.value.trim();
+    const password = passwordInput.value.trim();
 
-  if (userId && password) {
-    showLoginResult(
-      'AND 검증 : 아이디와 비밀번호가 모두 입력되어 통과되었습니다.(index.html로 이동합니다.)',
-      true,
-    );
-    setTimeout(() => {
-      window.location.href = 'index.html';
-    }, 800);
-  } else {
-    showLoginResult(
-      'AND 검증 : 아이디와 비밀번호를 모두 입력해야 합니다.(하나라도 비어 있으면 실패)',
-      false,
-    );
-  }
-});
+    const isAdmin = true;
+    const isApproverdUser = false;
+    const isWorkingTime = true;
+    const isBlockedUser = false;
+
+    const hasAuthority = isAdmin || isApproverdUser;
+
+    const canStartWork = hasAuthority && isWorkingTime && !isBlockedUser;
+
+    console.log('권한 여부(hasAuthority):', hasAuthority);
+    console.log('작업 가능 여부 (canStartWork):', canStartWork);
+
+    if (!canStartWork) {
+      showLoginResult(
+        '작업 조건을 만족하지 않아 접근이 제한되었습니다.',
+        false,
+      );
+      return;
+    }
+
+    if (userId && password) {
+      showLoginResult(
+        'AND 검증 : 아이디와 비밀번호가 모두 입력되어 통과되었습니다.(index.html로 이동합니다.)',
+        true,
+      );
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 800);
+    } else {
+      showLoginResult(
+        'AND 검증 : 아이디와 비밀번호를 모두 입력해야 합니다.(하나라도 비어 있으면 실패)',
+        false,
+      );
+    }
+  });
+}
