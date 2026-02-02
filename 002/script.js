@@ -79,21 +79,33 @@ if (
     }
   });
 
+  function canUserStartWork(
+    isAdmin,
+    isApproverdUser,
+    isWorkingTime,
+    isBlockedUser,
+  ) {
+    const hasAuthority = isAdmin || isApproverdUser;
+    const canStartWork = hasAuthority && isWorkingTime && !isBlockedUser;
+    console.log('권한 여부(hasAuthority):', hasAuthority);
+    console.log('작업 가능 여부 (canStartWork):', canStartWork);
+    return canStartWork;
+  }
   btnAndCheck.addEventListener('click', () => {
     const userId = userIdInput.value.trim();
     const password = passwordInput.value.trim();
 
     const isAdmin = true;
     const isApproverdUser = false;
-    const isWorkingTime = true;
+    const isWorkingTime = ture;
     const isBlockedUser = false;
 
-    const hasAuthority = isAdmin || isApproverdUser;
-
-    const canStartWork = hasAuthority && isWorkingTime && !isBlockedUser;
-
-    console.log('권한 여부(hasAuthority):', hasAuthority);
-    console.log('작업 가능 여부 (canStartWork):', canStartWork);
+    const canStartWork = canUserStartWork(
+      isAdmin,
+      isApproverdUser,
+      isWorkingTime,
+      isBlockedUser,
+    );
 
     if (!canStartWork) {
       showLoginResult(
