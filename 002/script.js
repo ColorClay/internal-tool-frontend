@@ -1,5 +1,6 @@
 console.log('스크립트 연결 완료');
-// index 에서만 적용
+
+// index 전용 코드
 const form = document.getElementById('checkForm');
 const messageEl = document.getElementById('message');
 
@@ -26,12 +27,14 @@ if (form && messageEl) {
     if (date.trim() === '') {
       message.push('점검일을 선택하세요.');
     }
+
     if (message.length > 0) {
       messageEl.textContent = message.join(' ');
       messageEl.classList.remove('success');
       messageEl.classList.add('error');
       return;
     }
+
     messageEl.textContent = '저장 준비 완료(테스트용 메세지)';
     messageEl.classList.remove('error');
     messageEl.classList.add('success');
@@ -42,7 +45,19 @@ if (form && messageEl) {
     console.log('비고:', memo);
   });
 }
-// auth에서만 적용
+
+// 작업 가능 여부 판단 함수 (재사용용 순수 함수)
+function canUserStartWork({
+  isAdmin = false,
+  isApprovedUser = false,
+  isWorkingTime = false,
+  isBlockedUser = false,
+} = {}) {
+  const hasAuthority = isAdmin || isApprovedUser;
+  return hasAuthority && isWorkingTime && !isBlockedUser;
+}
+
+// auth 전용 코드
 const userIdInput = document.getElementById('userId');
 const passwordInput = document.getElementById('password');
 const btnOrCheck = document.getElementById('btnOrCheck');
@@ -55,6 +70,7 @@ function showLoginResult(message, isOk) {
   loginResultBox.classList.remove('result-ok', 'result-error');
   loginResultBox.classList.add(isOk ? 'result-ok' : 'result-error');
 }
+
 if (
   btnOrCheck &&
   btnAndCheck &&
@@ -62,6 +78,7 @@ if (
   passwordInput &&
   loginResultBox
 ) {
+  // OR: 잘못된 검증 예시
   btnOrCheck.addEventListener('click', () => {
     const userId = userIdInput.value.trim();
     const password = passwordInput.value.trim();
@@ -79,34 +96,23 @@ if (
     }
   });
 
-  function canUserStartWork(
-    isAdmin,
-    isApproverdUser,
-    isWorkingTime,
-    isBlockedUser,
-  ) {
-    const hasAuthority = isAdmin || isApproverdUser;
-    const canStartWork = hasAuthority && isWorkingTime && !isBlockedUser;
-    console.log('권한 여부(hasAuthority):', hasAuthority);
-    console.log('작업 가능 여부 (canStartWork):', canStartWork);
-    return canStartWork;
-  }
+  // AND: 올바른 검증 + 작업 조건 가드
   btnAndCheck.addEventListener('click', () => {
     const userId = userIdInput.value.trim();
     const password = passwordInput.value.trim();
 
-    const isAdmin = true;
-    const isApproverdUser = false;
-    const isWorkingTime = ture;
-    const isBlockedUser = false;
+    // 현재 사용자 상태 스냅샷
+    const userState = {
+      isAdmin: true,
+      isApprovedUser: false,
+      isWorkingTime: true,
+      isBlockedUser: false,
+    };
 
-    const canStartWork = canUserStartWork(
-      isAdmin,
-      isApproverdUser,
-      isWorkingTime,
-      isBlockedUser,
-    );
+    // 작업 가능 여부 계산
+    const canStartWork = canUserStartWork(userState);
 
+    // 가드 클로즈
     if (!canStartWork) {
       showLoginResult(
         '작업 조건을 만족하지 않아 접근이 제한되었습니다.',
@@ -115,6 +121,7 @@ if (
       return;
     }
 
+    // AND 검증: 아이디 + 비밀번호 모두 필요
     if (userId && password) {
       showLoginResult(
         'AND 검증 : 아이디와 비밀번호가 모두 입력되어 통과되었습니다.(index.html로 이동합니다.)',
