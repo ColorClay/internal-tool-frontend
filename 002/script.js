@@ -1,3 +1,38 @@
+// 012 BLOCK 점검 데이터 저장 불러오기
+const STORAGE_KEY_CHECKS = 'checks';
+// 012-1 저장된 점검 리스트 불러오기
+function loadChecks() {
+  const raw = localStorage.getItem(STORAGE_KEY_CHECKS);
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error('점검 데이터 읽기 실패', e);
+    return [];
+  }
+}
+// 012-2 점검 리스트 전체 저장하기
+function saveChecks(checks) {
+  localStorage.setItem(STORAGE_KEY_CHECKS, JSON.stringify(checks));
+}
+// 012-3 새 점검 추가하기
+function addCheck(newCheck) {
+  const checks = loadChecks();
+  const last = checks[checks.length - 1];
+  const nextId = last ? last.id + 1 : 1;
+  const checkWithId = {
+    id: nextId,
+    ...newCheck,
+  };
+  checks.push(checkWithId);
+  saveChecks(checks);
+  return checkWithId;
+}
+
 // index 전용 코드
 const form = document.getElementById('checkForm');
 const messageEl = document.getElementById('message');
@@ -32,10 +67,21 @@ if (form && messageEl) {
       messageEl.classList.add('error');
       return;
     }
+    //012 실제 점검 데이터 저장
+    const displayStatus = statusLabelMap[status] ?? status;
+
+    addCheck({
+      equipment,
+      date,
+      status: displayStatus,
+      memo,
+    });
 
     messageEl.textContent = '저장 준비 완료(테스트용 메세지)';
     messageEl.classList.remove('error');
     messageEl.classList.add('success');
+
+    form.reset();
 
     console.log('설비명:', equipment);
     console.log('점검일:', date);
@@ -140,26 +186,31 @@ if (
 const checkListEl = document.getElementById('checkList');
 
 if (checkListEl) {
-  const checks = [
-    {
-      id: 1,
-      equipment: '냉동기 1번',
-      date: '2024-02-01',
-      status: '정상',
-    },
-    {
-      id: 2,
-      equipment: '보일러 A',
-      date: '2024-02-02',
-      status: '이상',
-    },
-    {
-      id: 3,
-      equipment: '펌프실',
-      date: '2024-02-03',
-      status: '점검중',
-    },
-  ];
+  let checks = loadChecks();
+  //저장된 데이터 없을떄 보여주는 예시 데이터
+  if (checks.length === 0) {
+    checks = [
+      {
+        id: 1,
+        equipment: '냉동기 1번',
+        date: '2024-02-01',
+        status: '정상(예시데이터)',
+      },
+      {
+        id: 2,
+        equipment: '보일러 A',
+        date: '2024-02-02',
+        status: '이상(예시데이터)',
+      },
+      {
+        id: 3,
+        equipment: '펌프실',
+        date: '2024-02-03',
+        status: '점검중(예시데이터)',
+      },
+    ];
+  }
+
   let selectedId = null;
 
   function renderCheckList() {
