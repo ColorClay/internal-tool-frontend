@@ -122,11 +122,11 @@ if (
     // AND 검증: 아이디 + 비밀번호 모두 필요
     if (userId && password) {
       showLoginResult(
-        'AND 검증 : 아이디와 비밀번호가 모두 입력되어 통과되었습니다.(index.html로 이동합니다.)',
+        'AND 검증 : 아이디와 비밀번호가 모두 입력되어 통과되었습니다.(대시보드로 이동합니다.)',
         true,
       );
       setTimeout(() => {
-        window.location.href = 'index.html';
+        window.location.href = 'dashboard.html';
       }, 800);
     } else {
       showLoginResult(
@@ -135,4 +135,52 @@ if (
       );
     }
   });
+}
+//011 BLOCK : 점검 목록
+const checkListEl = document.getElementById('checkList');
+
+if (checkListEl) {
+  const checks = [
+    {
+      id: 1,
+      equipment: '냉동기 1번',
+      date: '2024-02-01',
+      status: '정상',
+    },
+    {
+      id: 2,
+      equipment: '보일러 A',
+      date: '2024-02-02',
+      status: '이상',
+    },
+    {
+      id: 3,
+      equipment: '펌프실',
+      date: '2024-02-03',
+      status: '점검중',
+    },
+  ];
+  let selectedId = null;
+
+  function renderCheckList() {
+    checkListEl.innerHTML = '';
+
+    checks.forEach((check) => {
+      const li = document.createElement('li');
+
+      li.textContent = `${check.date} | ${check.equipment} (${check.status})`;
+
+      if (check.id === selectedId) {
+        li.classList.add('active');
+      }
+
+      li.addEventListener('click', () => {
+        selectedId = check.id;
+        renderCheckList();
+      });
+
+      checkListEl.appendChild(li);
+    });
+  }
+  renderCheckList();
 }

@@ -112,3 +112,43 @@ button {
   background-color: #fff4e5;
   color: #aa5a00;
 }
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.nav a {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid#ddd;
+  text-decoration: none;
+  font-size: 14px;
+  color: #333;
+}
+
+.nav a:hover {
+  background-color: #f3f3f3;
+}
+
+.nav a.active {
+  background-color: #333;
+  color: #fff;
+  border-color: #333;
+}
+
+.check-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.check-list li {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+}
+.check-list li.active {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
