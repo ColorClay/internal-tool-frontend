@@ -1,5 +1,3 @@
-console.log('스크립트 연결 완료');
-
 // index 전용 코드
 const form = document.getElementById('checkForm');
 const messageEl = document.getElementById('message');

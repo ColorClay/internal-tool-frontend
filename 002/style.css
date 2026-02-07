@@ -108,3 +108,7 @@ button {
   background-color: #ffecec;
   color: #aa2222;
 }
+.result-error {
+  background-color: #fff4e5;
+  color: #aa5a00;
+}
