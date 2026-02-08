@@ -184,9 +184,12 @@ if (
 }
 //011 BLOCK : 점검 목록
 const checkListEl = document.getElementById('checkList');
+const checkDetailEl = document.getElementById('checkDetail');
 
-if (checkListEl) {
+// 012 블럭 데이터 불러오기
+if (checkListEl && checkDetailEl) {
   let checks = loadChecks();
+
   //저장된 데이터 없을떄 보여주는 예시 데이터
   if (checks.length === 0) {
     checks = [
@@ -228,10 +231,101 @@ if (checkListEl) {
       li.addEventListener('click', () => {
         selectedId = check.id;
         renderCheckList();
+        renderCheckDetail();
       });
 
       checkListEl.appendChild(li);
     });
   }
+
+  // 013 블럭 선택된 점검 상세 렌더링
+  function renderCheckDetail() {
+    if (!checkDetailEl) return;
+
+    //선택된 점검 찾기
+    const selectedCheck = checks.find((check) => check.id === selectedId);
+
+    //아무것도 선택 안 했을때
+    if (!selectedCheck) {
+      checkDetailEl.innerHTML = `
+  <h2 class="subtitle">점검 상세</h2>
+  <p class="detail-empty">점검을 선택하세요.</p>`;
+      return;
+    }
+
+    //선택된 점검 상세 표시
+    checkDetailEl.innerHTML = `
+  <h2 class="subtitle">점검 상세</h2>
+  <div class="detail-item">
+  <span class="detail-label">설비명:</span>
+  ${selectedCheck.equipment}
+  </div>
+  <div class="detail-item">
+  <span class="detail-label">점검일:</span>
+  ${selectedCheck.date}
+  </div>
+  <div class="detail-item">
+  <span class="detail-label">상태:</span>
+  ${selectedCheck.status}
+  </div>
+  <div class="detail-item">
+  <span class="detail-label">비고:</span>
+  ${selectedCheck.memo || '-'}
+  </div>
+  `;
+  }
   renderCheckList();
+  renderCheckDetail();
+}
+
+// 014 BLOCK : 대시보드 요약 카드
+const statTotalEl = document.getElementById('statTotal');
+const statNormalEl = document.getElementById('statNormal');
+const statErrorEl = document.getElementById('statError');
+
+if (statTotalEl && statNormalEl && statErrorEl) {
+  // 저장된 점검 데이터 불러오기
+  let checks = loadChecks();
+
+  // 저장된 데이터가 하나도 없으면 예시 데이터 사용
+  if (checks.length === 0) {
+    checks = [
+      {
+        id: 1,
+        equipment: '냉동기 1번',
+        date: '2024-02-01',
+        status: '정상(예시데이터)',
+      },
+      {
+        id: 2,
+        equipment: '보일러 A',
+        date: '2024-02-02',
+        status: '이상(예시데이터)',
+      },
+      {
+        id: 3,
+        equipment: '펌프실',
+        date: '2024-02-03',
+        status: '점검중(예시데이터)',
+      },
+    ];
+  }
+
+  // 총 점검 건수
+  const totalCount = checks.length;
+
+  // '정상'이 들어간 상태만 카운트
+  const normalCount = checks.filter((check) =>
+    check.status.includes('정상'),
+  ).length;
+
+  // '이상'이 들어간 상태만 카운트
+  const errorCount = checks.filter((check) =>
+    check.status.includes('이상'),
+  ).length;
+
+  // 화면에 반영
+  statTotalEl.textContent = totalCount;
+  statNormalEl.textContent = normalCount;
+  statErrorEl.textContent = errorCount;
 }

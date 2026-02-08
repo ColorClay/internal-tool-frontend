@@ -6,6 +6,7 @@
     <title>시설 작업 관리 내부툴 - 대시보드</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
+
   <body>
     <header class="header">
       <h1 class="title">시설 작업 관리 내부툴</h1>
@@ -15,25 +16,26 @@
       <nav class="nav">
         <a href="dashboard.html" class="active">대시보드</a>
         <a href="index.html">점검 등록</a>
-        <a
-          href="#"
-          onclick="
-            alert('설정 페이지는 아직 준비중입니다.');
-            return false;
-          "
-        >
-          설정(준비중)
-        </a>
+        <a href="checks.html">점검 목록</a>
       </nav>
       <section class="card">
-        <h2 class="subtitle">대시보드</h2>
-        <p>시설 작업 관리 내부툴의 시작 화면입니다.</p>
-        <ul>
-          <li>오늘 점검 등록: (추후 연동 예정)</li>
-          <li>미완료 점검: (추후 연동 예정)</li>
-          <li>공지사항: (추후 연동 예정)</li>
-        </ul>
+        <h2 class="subtitle">점검요약</h2>
+        <div class="stat-list">
+          <div class="stat-item">
+            <span class="stat-label"> 총 점검 건수 </span>
+            <span class="stat-value" id="statTotal">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label"> 정상 </span>
+            <span class="stat-value" id="statNormal">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label"> 이상 </span>
+            <span class="stat-value" id="statError">0</span>
+          </div>
+        </div>
       </section>
     </main>
+    <script src="./script.js"></script>
   </body>
 </html>
