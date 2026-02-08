@@ -182,42 +182,74 @@ if (
     }
   });
 }
-//011 BLOCK : 점검 목록
+// 011 BLOCK : 점검 목록
 const checkListEl = document.getElementById('checkList');
 const checkDetailEl = document.getElementById('checkDetail');
+const SAMPLE_CHECKS = [
+  {
+    id: 1,
+    equipment: '냉동기 1번',
+    date: '2024-02-01',
+    status: '정상(예시데이터)',
+  },
+  {
+    id: 2,
+    equipment: '보일러 A',
+    date: '2024-02-02',
+    status: '이상(예시데이터)',
+  },
+  {
+    id: 3,
+    equipment: '펌프실',
+    date: '2024-02-03',
+    status: '점검중(예시데이터)',
+  },
+];
 
-// 012 블럭 데이터 불러오기
+//012 블럭 데이터 공통 함수 (어디서나 사용 가능하도록 if 밖에 배치)
+function getChecksWithFallback() {
+  const checks = loadChecks();
+  return checks.length > 0 ? checks : SAMPLE_CHECKS;
+}
+
+// 015 블럭 필터 상태 요소
+let filterKeyword = '';
+let filterStatus = 'all';
+
+const filterKeywordInput = document.getElementById('filterKeyword');
+const filterStatusSelect = document.getElementById('filterStatus');
+
+// 015 검색/필터 적용된 점검 목록 가져오기
+function getFilteredChecks() {
+  const checks = getChecksWithFallback();
+  const keyword = filterKeyword.trim().toLowerCase();
+
+  return checks.filter((check) => {
+    // 설비명 검색
+    const equipmentText = (check.equipment || '').toLowerCase();
+    const matchKeyword = keyword === '' || equipmentText.includes(keyword);
+
+    // 상태 필터(전체/정상/이상/점검중)
+    let matchStatus = true;
+    if (filterStatus === 'normal') {
+      matchStatus = check.status.includes('정상');
+    } else if (filterStatus === 'error') {
+      matchStatus = check.status.includes('이상');
+    } else if (filterStatus === 'check') {
+      matchStatus = check.status.includes('점검중');
+    } else {
+      matchStatus = true;
+    }
+    return matchKeyword && matchStatus;
+  });
+}
+// 012 점검 목록 상세
 if (checkListEl && checkDetailEl) {
-  let checks = loadChecks();
-
-  //저장된 데이터 없을떄 보여주는 예시 데이터
-  if (checks.length === 0) {
-    checks = [
-      {
-        id: 1,
-        equipment: '냉동기 1번',
-        date: '2024-02-01',
-        status: '정상(예시데이터)',
-      },
-      {
-        id: 2,
-        equipment: '보일러 A',
-        date: '2024-02-02',
-        status: '이상(예시데이터)',
-      },
-      {
-        id: 3,
-        equipment: '펌프실',
-        date: '2024-02-03',
-        status: '점검중(예시데이터)',
-      },
-    ];
-  }
-
   let selectedId = null;
-
   function renderCheckList() {
     checkListEl.innerHTML = '';
+
+    const checks = getFilteredChecks();
 
     checks.forEach((check) => {
       const li = document.createElement('li');
@@ -242,10 +274,11 @@ if (checkListEl && checkDetailEl) {
   function renderCheckDetail() {
     if (!checkDetailEl) return;
 
-    //선택된 점검 찾기
+    const checks = getChecksWithFallback();
+    // 선택된 점검 찾기
     const selectedCheck = checks.find((check) => check.id === selectedId);
 
-    //아무것도 선택 안 했을때
+    // 아무것도 선택 안 했을때
     if (!selectedCheck) {
       checkDetailEl.innerHTML = `
   <h2 class="subtitle">점검 상세</h2>
@@ -253,7 +286,7 @@ if (checkListEl && checkDetailEl) {
       return;
     }
 
-    //선택된 점검 상세 표시
+    // 선택된 점검 상세 표시
     checkDetailEl.innerHTML = `
   <h2 class="subtitle">점검 상세</h2>
   <div class="detail-item">
@@ -274,6 +307,23 @@ if (checkListEl && checkDetailEl) {
   </div>
   `;
   }
+
+  // 015 검색/필터 입력 이벤트
+  if (filterKeywordInput) {
+    filterKeywordInput.addEventListener('input', () => {
+      filterKeyword = filterKeywordInput.value;
+      renderCheckList();
+      renderCheckDetail();
+    });
+  }
+
+  if (filterStatusSelect) {
+    filterStatusSelect.addEventListener('change', () => {
+      filterStatus = filterStatusSelect.value;
+      renderCheckList();
+      renderCheckDetail();
+    });
+  }
   renderCheckList();
   renderCheckDetail();
 }
@@ -285,31 +335,7 @@ const statErrorEl = document.getElementById('statError');
 
 if (statTotalEl && statNormalEl && statErrorEl) {
   // 저장된 점검 데이터 불러오기
-  let checks = loadChecks();
-
-  // 저장된 데이터가 하나도 없으면 예시 데이터 사용
-  if (checks.length === 0) {
-    checks = [
-      {
-        id: 1,
-        equipment: '냉동기 1번',
-        date: '2024-02-01',
-        status: '정상(예시데이터)',
-      },
-      {
-        id: 2,
-        equipment: '보일러 A',
-        date: '2024-02-02',
-        status: '이상(예시데이터)',
-      },
-      {
-        id: 3,
-        equipment: '펌프실',
-        date: '2024-02-03',
-        status: '점검중(예시데이터)',
-      },
-    ];
-  }
+  let checks = getChecksWithFallback();
 
   // 총 점검 건수
   const totalCount = checks.length;

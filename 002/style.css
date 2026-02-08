@@ -198,3 +198,14 @@ button {
   color: #555;
   margin-right: 4px;
 }
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.filter-bar input[type='text'] {
+  flex: 1;
+}
+.filter-bar select {
+  min-width: 120px;
+}

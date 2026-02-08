@@ -18,6 +18,15 @@
       </nav>
       <section class="card">
         <h2 class="subtitle">점검 목록</h2>
+        <div class="filter-bar">
+          <input type="text" id="filterKeyword" placeholder="설비명 검색" />
+          <select id="filterStatus">
+            <option value="all">전체</option>
+            <option value="normal">정상</option>
+            <option value="error">이상</option>
+            <option value="check">점검중</option>
+          </select>
+        </div>
         <ul id="checkList" class="check-list"></ul>
       </section>
       <section class="card" id="checkDetail">
