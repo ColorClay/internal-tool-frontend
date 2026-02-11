@@ -26,7 +26,13 @@
             <option value="error">이상</option>
             <option value="check">점검중</option>
           </select>
+          <select id="sortOrder">
+            <option value="date-desc">날짜 최신순</option>
+            <option value="date-asc">날짜 오래된순</option>
+            <option value="name-asc">설비명 (가나다순)</option>
+          </select>
         </div>
+        <p class="check-count" id="checkCount">현재 조건에 맞는 점검 0건</p>
         <ul id="checkList" class="check-list"></ul>
       </section>
       <section class="card" id="checkDetail">

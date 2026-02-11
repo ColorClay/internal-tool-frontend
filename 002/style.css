@@ -209,3 +209,12 @@ button {
 .filter-bar select {
   min-width: 120px;
 }
+.check-count {
+  margin: 8px 0 4px;
+  font-size: 14px;
+  color: #555;
+}
+.check-list .empty {
+  color: #888;
+  font-style: italic;
+}

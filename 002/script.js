@@ -218,13 +218,19 @@ let filterStatus = 'all';
 
 const filterKeywordInput = document.getElementById('filterKeyword');
 const filterStatusSelect = document.getElementById('filterStatus');
+const checkCountEl = document.getElementById('checkCount');
 
-// 015 검색/필터 적용된 점검 목록 가져오기
+//016 정렬 상태 요소
+let sortOrder = 'date-desc';
+
+const sortOrderSelect = document.getElementById('sortOrder');
+
+// 015 검색/필터 적용된 점검 목록 가져오기 + 016
 function getFilteredChecks() {
-  const checks = getChecksWithFallback();
+  const baseChecks = getChecksWithFallback();
   const keyword = filterKeyword.trim().toLowerCase();
 
-  return checks.filter((check) => {
+  const filtered = baseChecks.filter((check) => {
     // 설비명 검색
     const equipmentText = (check.equipment || '').toLowerCase();
     const matchKeyword = keyword === '' || equipmentText.includes(keyword);
@@ -242,18 +248,55 @@ function getFilteredChecks() {
     }
     return matchKeyword && matchStatus;
   });
+
+  //016 정렬단계
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortOrder === 'date-desc') {
+      if (a.date < b.date) return 1;
+      if (a.date > b.date) return -1;
+      return 0;
+    }
+    if (sortOrder === 'date-asc') {
+      if (a.date > b.date) return 1;
+      if (a.date < b.date) return -1;
+    }
+    if (sortOrder === 'name-asc') {
+      const nameA = (a.equipment || '').toString();
+      const nameB = (b.equipment || '').toString();
+      return nameA.localeCompare(nameB);
+    }
+    return 0;
+  });
+  return sorted;
 }
 // 012 점검 목록 상세
 if (checkListEl && checkDetailEl) {
   let selectedId = null;
-  function renderCheckList() {
-    checkListEl.innerHTML = '';
 
+  function renderCheckList() {
+    if (!checkListEl) return;
+
+    //검색/필터/정렬/ 적용된 최종 목록 가져오기
     const checks = getFilteredChecks();
 
+    //개수 표시 업데이트
+    if (checkCountEl) {
+      checkCountEl.textContent = `현재 조건에 맞는 점검 ${checks.length} 건`;
+    }
+    //기존 목록 비우기
+    checkListEl.innerHTML = '';
+
+    //결과 0건일때 안내 멘트
+    if (checks.length === 0) {
+      const li = document.createElement('li');
+      li.textContent = '조건에 맞는 점검이 없습니다.';
+      li.classList.add('empty');
+      checkListEl.appendChild(li);
+      return;
+    }
+    //결과가 있을때 li 생성
     checks.forEach((check) => {
       const li = document.createElement('li');
-
       li.textContent = `${check.date} | ${check.equipment} (${check.status})`;
 
       if (check.id === selectedId) {
@@ -320,6 +363,13 @@ if (checkListEl && checkDetailEl) {
   if (filterStatusSelect) {
     filterStatusSelect.addEventListener('change', () => {
       filterStatus = filterStatusSelect.value;
+      renderCheckList();
+      renderCheckDetail();
+    });
+  }
+  if (sortOrderSelect) {
+    sortOrderSelect.addEventListener('change', () => {
+      sortOrder = sortOrderSelect.value;
       renderCheckList();
       renderCheckDetail();
     });
