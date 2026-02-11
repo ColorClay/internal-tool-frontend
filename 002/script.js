@@ -205,7 +205,20 @@ const SAMPLE_CHECKS = [
     status: '점검중(예시데이터)',
   },
 ];
-
+//018 상태 텍스트 css 클래스
+function getStatusClass(statusText) {
+  if (!statusText) return '';
+  if (statusText.includes('정상')) {
+    return 'status-normal';
+  }
+  if (statusText.includes('이상')) {
+    return 'status-error';
+  }
+  if (statusText.includes('점검중')) {
+    return 'status-check';
+  }
+  return '';
+}
 //012 블럭 데이터 공통 함수 (어디서나 사용 가능하도록 if 밖에 배치)
 function getChecksWithFallback() {
   const checks = loadChecks();
@@ -297,8 +310,14 @@ if (checkListEl && checkDetailEl) {
     //결과가 있을때 li 생성
     checks.forEach((check) => {
       const li = document.createElement('li');
+      //018 상태 텍스트 css클래스
+      const statusClass = getStatusClass(check.status);
+
       li.textContent = `${check.date} | ${check.equipment} (${check.status})`;
 
+      if (statusClass) {
+        li.classList.add(statusClass);
+      }
       if (check.id === selectedId) {
         li.classList.add('active');
       }
@@ -329,6 +348,8 @@ if (checkListEl && checkDetailEl) {
       return;
     }
 
+    const statusClass = getStatusClass(selectedCheck.status);
+
     // 선택된 점검 상세 표시
     checkDetailEl.innerHTML = `
   <h2 class="subtitle">점검 상세</h2>
@@ -342,7 +363,7 @@ if (checkListEl && checkDetailEl) {
   </div>
   <div class="detail-item">
   <span class="detail-label">상태:</span>
-  ${selectedCheck.status}
+  <span class="status-badge ${statusClass}">${selectedCheck.status}</span>
   </div>
   <div class="detail-item">
   <span class="detail-label">비고:</span>

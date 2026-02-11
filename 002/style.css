@@ -218,3 +218,30 @@ button {
   color: #888;
   font-style: italic;
 }
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+.status-normal {
+  background-color: #e6f4ea;
+  color: #1e7d34;
+}
+.status-error {
+  background-color: #ffebee;
+  color: #c62828;
+}
+.status-check {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+.check-list li.status-normal {
+  font-weight: 500;
+}
+.check-list li.status-error {
+  font-weight: 600;
+}
+.check-list li.status-check {
+  font-weight: 500;
+}
