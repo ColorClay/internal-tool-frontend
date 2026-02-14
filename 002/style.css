@@ -303,3 +303,17 @@ button {
 .btnsecondary:hover {
   background-color: #e8e8e8;
 }
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.hidden {
+  display: none;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}

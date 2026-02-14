@@ -320,6 +320,9 @@ function updatePagination(totalItems, totalPages) {
 // 012 + 015 + 016 + 019 BLOCK : 점검 목록 렌더링
 let selectedId = null; // 현재 선택된 점검의 id
 
+// 021 점검 상세 패널 편집
+let editMode = false;
+
 function renderCheckList() {
   if (!checkListEl) return; // 다른 페이지에서 script.js 로딩될 때 방어
 
@@ -370,6 +373,8 @@ function renderCheckList() {
 
     li.addEventListener('click', () => {
       selectedId = check.id;
+      //021 다른 항목 선택시 편집모드 종료
+      editMode = false;
       renderCheckList();
       renderCheckDetail();
     });
@@ -385,11 +390,16 @@ function renderCheckList() {
 function renderCheckDetail() {
   if (!checkDetailEl) return;
 
+  // 021 예시데이터 수정/삭제 금지
+  const usingSample = isUsingSampleChecks();
+
+  // 저장데이터 없으면 예시데이터 반환
   const checks = getChecksWithFallback();
   const selectedCheck = checks.find((check) => check.id === selectedId);
 
   // 아무것도 선택 안 했을 때
   if (!selectedCheck) {
+    editMode = false;
     checkDetailEl.innerHTML = `
       <h2 class="subtitle">점검 상세</h2>
       <p class="detail-empty">점검을 선택하세요.</p>
@@ -398,10 +408,138 @@ function renderCheckDetail() {
   }
 
   const statusClass = getStatusClass(selectedCheck.status);
+  // 021 에딧모드 최소 방어용
+  const escapeHtml = (text) =>
+    String(text)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
 
+  const escapeAttr = (text) => escapeHtml(text).replaceAll('\n', ' ');
+
+  // 021 edit 입력 폼 렌더
+  if (editMode) {
+    checkDetailEl.innerHTML = `
+      <h2 class="subtitle">점검 상세 (수정)</h2>
+      ${
+        usingSample
+          ? `<p class="detail-empty">예시 데이터는 수정할 수 없습니다.</p>`
+          : ''
+      }
+
+      <div class="detail-item">
+        <span class="detail-label">설비명:</span>
+        <input
+          id="editEquipment"
+          type="text"
+          value="${escapeAttr(selectedCheck.equipment || '')}"
+          ${usingSample ? 'disabled' : ''}
+        />
+      </div>
+
+      <div class="detail-item">
+        <span class="detail-label">점검일:</span>
+        <input
+          id="editDate"
+          type="date"
+          value="${escapeAttr(selectedCheck.date || '')}"
+          ${usingSample ? 'disabled' : ''}
+        />
+      </div>
+
+      <div class="detail-item">
+        <span class="detail-label">상태:</span>
+        <select id="editStatus" ${usingSample ? 'disabled' : ''}>
+          <option value="정상">정상</option>
+          <option value="이상">이상</option>
+          <option value="점검중">점검중</option>
+        </select>
+      </div>
+
+      <div class="detail-item">
+        <span class="detail-label">비고:</span>
+        <textarea id="editMemo" rows="3" ${
+          usingSample ? 'disabled' : ''
+        }>${escapeHtml(selectedCheck.memo || '')}</textarea>
+      </div>
+
+      <div class="detail-actions">
+        <button type="button" id="saveBtn" ${usingSample ? 'disabled' : ''}>
+          저장
+        </button>
+        <button type="button" id="cancelBtn">취소</button>
+      </div>
+    `;
+
+    // select 기본값 맞추기
+    const editStatusEl = document.getElementById('editStatus');
+    if (editStatusEl) {
+      if ((selectedCheck.status || '').includes('정상'))
+        editStatusEl.value = '정상';
+      else if ((selectedCheck.status || '').includes('이상'))
+        editStatusEl.value = '이상';
+      else if ((selectedCheck.status || '').includes('점검중'))
+        editStatusEl.value = '점검중';
+      else editStatusEl.value = '정상';
+    }
+
+    // 021 버튼 이벤트(렌더 직후)
+    const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        editMode = false;
+        renderCheckDetail();
+      });
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        if (usingSample) return;
+
+        const equipmentEl = document.getElementById('editEquipment');
+        const dateEl = document.getElementById('editDate');
+        const statusEl = document.getElementById('editStatus');
+        const memoEl = document.getElementById('editMemo');
+
+        const equipment = equipmentEl ? equipmentEl.value.trim() : '';
+        const date = dateEl ? dateEl.value : '';
+        const status = statusEl ? statusEl.value : '';
+        const memo = memoEl ? memoEl.value.trim() : '';
+
+        if (equipment === '') {
+          alert('설비명을 입력하세요.');
+          return;
+        }
+        if (date === '') {
+          alert('점검일을 선택하세요.');
+          return;
+        }
+        //수정/삭제는 저장 데이터만 대상으로 해야함
+        const stored = loadChecks();
+        const next = stored.map((c) => {
+          if (c.id !== selectedId) return c;
+          return { ...c, equipment, date, status, memo };
+        });
+        saveChecks(next);
+
+        editMode = false;
+        renderCheckList();
+        renderCheckDetail();
+      });
+    }
+
+    return;
+  }
+
+  //021 보기 모드 렌더
   // 선택된 점검 상세 표시
   checkDetailEl.innerHTML = `
     <h2 class="subtitle">점검 상세</h2>
+    ${usingSample ? `<p class="detail-empty">현재 예시 데이터 표시 중입니다.(수정/삭제 불가)</p>` : ''}
     <div class="detail-item">
       <span class="detail-label">설비명:</span>
       ${selectedCheck.equipment}
@@ -412,13 +550,51 @@ function renderCheckDetail() {
     </div>
     <div class="detail-item">
       <span class="detail-label">상태:</span>
-      <span class="status-badge ${statusClass}">${selectedCheck.status}</span>
+      <span class="status-badge ${statusClass}">${escapeHtml(selectedCheck.status)}</span>
     </div>
     <div class="detail-item">
       <span class="detail-label">비고:</span>
       ${selectedCheck.memo || '-'}
     </div>
+    <div class="detail-actions">
+    <button type="button" id="editBtn" ${usingSample ? 'disabled' : ''}>수정</button>
+    <button type="button" id="deleteBtn" ${usingSample ? 'disabled' : ''}>삭제</button>
+    </div>
   `;
+
+  // 021 보기 모드 버튼 이벤트
+  const editBtn = document.getElementById('editBtn');
+  const deleteBtn = document.getElementById('deleteBtn');
+
+  if (editBtn) {
+    editBtn.addEventListener('click', () => {
+      if (usingSample) return;
+      editMode = true;
+      renderCheckDetail();
+    });
+  }
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => {
+      if (usingSample) return;
+      const ok = confirm('이 점검을 삭제할까요?');
+      if (!ok) return;
+      //저장 데이터에서만 삭제
+      const stored = loadChecks();
+      const next = stored.filter((c) => c.id !== selectedId);
+      saveChecks(next);
+      //선택 해제
+      selectedId = null;
+      editMode = false;
+
+      //페이지 보정
+      const allChecks = getFilteredChecks();
+      const totalPages = Math.max(1, Math.ceil(allChecks.length / PAGE_SIZE));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      renderCheckList();
+      renderCheckDetail();
+    });
+  }
 }
 
 // 015/016/019 BLOCK : 이벤트 바인딩 (checks.html에서만 동작)
@@ -428,6 +604,7 @@ if (checkListEl && checkDetailEl) {
     filterKeywordInput.addEventListener('input', () => {
       filterKeyword = filterKeywordInput.value;
       currentPage = 1; // 검색 바뀌면 1페이지로
+      editMode = false;
       renderCheckList();
       renderCheckDetail();
     });
@@ -438,6 +615,7 @@ if (checkListEl && checkDetailEl) {
     filterStatusSelect.addEventListener('change', () => {
       filterStatus = filterStatusSelect.value;
       currentPage = 1;
+      editMode = false;
       renderCheckList();
       renderCheckDetail();
     });
@@ -448,6 +626,7 @@ if (checkListEl && checkDetailEl) {
     sortOrderSelect.addEventListener('change', () => {
       sortOrder = sortOrderSelect.value;
       currentPage = 1;
+      editMode = false;
       renderCheckList();
       renderCheckDetail();
     });
@@ -471,6 +650,7 @@ if (checkListEl && checkDetailEl) {
     prevPageBtn.addEventListener('click', () => {
       if (currentPage > 1) {
         currentPage -= 1;
+        editMode = false;
         renderCheckList();
         renderCheckDetail();
       }
@@ -481,6 +661,7 @@ if (checkListEl && checkDetailEl) {
   if (nextPageBtn) {
     nextPageBtn.addEventListener('click', () => {
       currentPage += 1; // 범위는 renderCheckList()에서 보정
+      editMode = false;
       renderCheckList();
       renderCheckDetail();
     });
