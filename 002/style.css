@@ -245,3 +245,23 @@ button {
 .check-list li.status-check {
   font-weight: 500;
 }
+/*019 점검 목록 페이지*/
+.pagination {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+.pagination button {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+  cursor: pointer;
+}
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

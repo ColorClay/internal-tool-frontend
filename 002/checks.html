@@ -8,7 +8,7 @@
   </head>
   <body>
     <header class="header">
-      <h1 class="titile">시설 작업 관리 내부툴</h1>
+      <h1 class="title">시설 작업 관리 내부툴</h1>
     </header>
     <main class="container">
       <nav class="nav">
@@ -35,6 +35,11 @@
         <p class="check-count" id="checkCount">현재 조건에 맞는 점검 0건</p>
         <ul id="checkList" class="check-list"></ul>
       </section>
+      <div class="pagination">
+        <button id="prevPage" type="button">이전</button>
+        <span id="pageInfo">1 /1</span>
+        <button id="nextPage" type="button">다음</button>
+      </div>
       <section class="card" id="checkDetail">
         <h2 class="subtitle">점검상세</h2>
         <p class="detail-empty">점검을 선택하세요.</p>

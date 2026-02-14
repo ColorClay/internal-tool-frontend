@@ -185,6 +185,7 @@ if (
 // 011 BLOCK : 점검 목록
 const checkListEl = document.getElementById('checkList');
 const checkDetailEl = document.getElementById('checkDetail');
+
 const SAMPLE_CHECKS = [
   {
     id: 1,
@@ -205,44 +206,52 @@ const SAMPLE_CHECKS = [
     status: '점검중(예시데이터)',
   },
 ];
-//018 상태 텍스트 css 클래스
+
+// 018 BLOCK : 상태 텍스트 → CSS 클래스
+// statusText 안에 '정상' / '이상' / '점검중'이 들어있으면
+// 각각 대응하는 배지 클래스 이름을 돌려준다.
 function getStatusClass(statusText) {
   if (!statusText) return '';
-  if (statusText.includes('정상')) {
-    return 'status-normal';
-  }
-  if (statusText.includes('이상')) {
-    return 'status-error';
-  }
-  if (statusText.includes('점검중')) {
-    return 'status-check';
-  }
+  if (statusText.includes('정상')) return 'status-normal';
+  if (statusText.includes('이상')) return 'status-error';
+  if (statusText.includes('점검중')) return 'status-check';
   return '';
 }
-//012 블럭 데이터 공통 함수 (어디서나 사용 가능하도록 if 밖에 배치)
+
+// 012 BLOCK : 점검 데이터 공통 불러오기
+// localStorage에 아무 것도 없으면 SAMPLE_CHECKS를 대신 사용
 function getChecksWithFallback() {
   const checks = loadChecks();
   return checks.length > 0 ? checks : SAMPLE_CHECKS;
 }
 
-// 015 블럭 필터 상태 요소
-let filterKeyword = '';
-let filterStatus = 'all';
+// 015 BLOCK : 검색/상태 필터 상태값
+let filterKeyword = ''; // 설비명 검색어
+let filterStatus = 'all'; // 전체/정상/이상/점검중
 
+// 016 BLOCK : 정렬 상태값
+let sortOrder = 'date-desc'; // 날짜 최신순이 기본
+
+// 019 BLOCK : 페이지네이션 상태값
+let currentPage = 1; // 현재 페이지 번호 (1부터 시작)
+const PAGE_SIZE = 5; // 한 페이지에 보여줄 개수
+
+// 015/016/019 BLOCK : DOM 요소 모으기
 const filterKeywordInput = document.getElementById('filterKeyword');
 const filterStatusSelect = document.getElementById('filterStatus');
+const sortOrderSelect = document.getElementById('sortOrder');
 const checkCountEl = document.getElementById('checkCount');
 
-//016 정렬 상태 요소
-let sortOrder = 'date-desc';
+const prevPageBtn = document.getElementById('prevPage');
+const nextPageBtn = document.getElementById('nextPage');
+const pageInfoEl = document.getElementById('pageInfo');
 
-const sortOrderSelect = document.getElementById('sortOrder');
-
-// 015 검색/필터 적용된 점검 목록 가져오기 + 016
+// 015 + 016 BLOCK : 검색/필터/정렬까지 적용한 최종 배열 만들기
 function getFilteredChecks() {
   const baseChecks = getChecksWithFallback();
   const keyword = filterKeyword.trim().toLowerCase();
 
+  // 1단계: 검색 + 상태 필터
   const filtered = baseChecks.filter((check) => {
     // 설비명 검색
     const equipmentText = (check.equipment || '').toLowerCase();
@@ -256,145 +265,207 @@ function getFilteredChecks() {
       matchStatus = check.status.includes('이상');
     } else if (filterStatus === 'check') {
       matchStatus = check.status.includes('점검중');
-    } else {
-      matchStatus = true;
     }
+    // filterStatus === 'all' 이면 기본값 true 유지
+
     return matchKeyword && matchStatus;
   });
 
-  //016 정렬단계
+  // 2단계: 정렬
   const sorted = [...filtered].sort((a, b) => {
+    // 날짜 최신순 (날짜 큰 값이 앞)
     if (sortOrder === 'date-desc') {
       if (a.date < b.date) return 1;
       if (a.date > b.date) return -1;
       return 0;
     }
+
+    // 날짜 오래된 순 (날짜 작은 값이 앞)
     if (sortOrder === 'date-asc') {
       if (a.date > b.date) return 1;
       if (a.date < b.date) return -1;
+      return 0;
     }
+
+    // 설비명 가나다순
     if (sortOrder === 'name-asc') {
       const nameA = (a.equipment || '').toString();
       const nameB = (b.equipment || '').toString();
       return nameA.localeCompare(nameB);
     }
+
     return 0;
   });
+
   return sorted;
 }
-// 012 점검 목록 상세
-if (checkListEl && checkDetailEl) {
-  let selectedId = null;
 
-  function renderCheckList() {
-    if (!checkListEl) return;
+// 019 BLOCK : 페이지 정보/버튼 상태 업데이트
+function updatePagination(totalItems, totalPages) {
+  if (!pageInfoEl || !prevPageBtn || !nextPageBtn) return;
 
-    //검색/필터/정렬/ 적용된 최종 목록 가져오기
-    const checks = getFilteredChecks();
+  // 예: "1 / 3 (총 12건)"
+  pageInfoEl.textContent = `${currentPage} / ${totalPages} (총 ${totalItems}건)`;
 
-    //개수 표시 업데이트
-    if (checkCountEl) {
-      checkCountEl.textContent = `현재 조건에 맞는 점검 ${checks.length} 건`;
+  prevPageBtn.disabled = currentPage <= 1;
+  nextPageBtn.disabled = currentPage >= totalPages;
+}
+
+// 012 + 015 + 016 + 019 BLOCK : 점검 목록 렌더링
+let selectedId = null; // 현재 선택된 점검의 id
+
+function renderCheckList() {
+  if (!checkListEl) return; // 다른 페이지에서 script.js 로딩될 때 방어
+
+  // 1) 검색/필터/정렬이 모두 적용된 전체 목록
+  const allChecks = getFilteredChecks();
+
+  // 2) 개수 표시 업데이트
+  if (checkCountEl) {
+    checkCountEl.textContent = `현재 조건에 맞는 점검 ${allChecks.length}건`;
+  }
+
+  // 3) 총 페이지 수 계산 (0건이어도 최소 1페이지)
+  const totalPages = Math.max(1, Math.ceil(allChecks.length / PAGE_SIZE));
+
+  // 4) currentPage 보정 (필터 변경 등으로 범위 벗어났을 때)
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  // 5) 현재 페이지에 보여줄 구간 계산
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const pageChecks = allChecks.slice(startIndex, endIndex);
+
+  // 6) 기존 목록 비우기
+  checkListEl.innerHTML = '';
+
+  // 7) 결과 0건일 때 안내 멘트
+  if (pageChecks.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = '조건에 맞는 점검이 없습니다.';
+    li.classList.add('empty');
+    checkListEl.appendChild(li);
+
+    updatePagination(allChecks.length, totalPages);
+    return;
+  }
+
+  // 8) 결과가 있을 때 li 생성
+  pageChecks.forEach((check) => {
+    const li = document.createElement('li');
+    li.textContent = `${check.date} | ${check.equipment} (${check.status})`;
+
+    if (check.id === selectedId) {
+      li.classList.add('active');
     }
-    //기존 목록 비우기
-    checkListEl.innerHTML = '';
 
-    //결과 0건일때 안내 멘트
-    if (checks.length === 0) {
-      const li = document.createElement('li');
-      li.textContent = '조건에 맞는 점검이 없습니다.';
-      li.classList.add('empty');
-      checkListEl.appendChild(li);
-      return;
-    }
-    //결과가 있을때 li 생성
-    checks.forEach((check) => {
-      const li = document.createElement('li');
-      //018 상태 텍스트 css클래스
-      const statusClass = getStatusClass(check.status);
-
-      li.textContent = `${check.date} | ${check.equipment} (${check.status})`;
-
-      if (statusClass) {
-        li.classList.add(statusClass);
-      }
-      if (check.id === selectedId) {
-        li.classList.add('active');
-      }
-
-      li.addEventListener('click', () => {
-        selectedId = check.id;
-        renderCheckList();
-        renderCheckDetail();
-      });
-
-      checkListEl.appendChild(li);
+    li.addEventListener('click', () => {
+      selectedId = check.id;
+      renderCheckList();
+      renderCheckDetail();
     });
-  }
 
-  // 013 블럭 선택된 점검 상세 렌더링
-  function renderCheckDetail() {
-    if (!checkDetailEl) return;
+    checkListEl.appendChild(li);
+  });
 
-    const checks = getChecksWithFallback();
-    // 선택된 점검 찾기
-    const selectedCheck = checks.find((check) => check.id === selectedId);
+  // 9) 페이지 정보/버튼 상태 갱신
+  updatePagination(allChecks.length, totalPages);
+}
 
-    // 아무것도 선택 안 했을때
-    if (!selectedCheck) {
-      checkDetailEl.innerHTML = `
-  <h2 class="subtitle">점검 상세</h2>
-  <p class="detail-empty">점검을 선택하세요.</p>`;
-      return;
-    }
+// 013 BLOCK : 선택된 점검 상세 렌더링
+function renderCheckDetail() {
+  if (!checkDetailEl) return;
 
-    const statusClass = getStatusClass(selectedCheck.status);
+  const checks = getChecksWithFallback();
+  const selectedCheck = checks.find((check) => check.id === selectedId);
 
-    // 선택된 점검 상세 표시
+  // 아무것도 선택 안 했을 때
+  if (!selectedCheck) {
     checkDetailEl.innerHTML = `
-  <h2 class="subtitle">점검 상세</h2>
-  <div class="detail-item">
-  <span class="detail-label">설비명:</span>
-  ${selectedCheck.equipment}
-  </div>
-  <div class="detail-item">
-  <span class="detail-label">점검일:</span>
-  ${selectedCheck.date}
-  </div>
-  <div class="detail-item">
-  <span class="detail-label">상태:</span>
-  <span class="status-badge ${statusClass}">${selectedCheck.status}</span>
-  </div>
-  <div class="detail-item">
-  <span class="detail-label">비고:</span>
-  ${selectedCheck.memo || '-'}
-  </div>
-  `;
+      <h2 class="subtitle">점검 상세</h2>
+      <p class="detail-empty">점검을 선택하세요.</p>
+    `;
+    return;
   }
 
-  // 015 검색/필터 입력 이벤트
+  const statusClass = getStatusClass(selectedCheck.status);
+
+  // 선택된 점검 상세 표시
+  checkDetailEl.innerHTML = `
+    <h2 class="subtitle">점검 상세</h2>
+    <div class="detail-item">
+      <span class="detail-label">설비명:</span>
+      ${selectedCheck.equipment}
+    </div>
+    <div class="detail-item">
+      <span class="detail-label">점검일:</span>
+      ${selectedCheck.date}
+    </div>
+    <div class="detail-item">
+      <span class="detail-label">상태:</span>
+      <span class="status-badge ${statusClass}">${selectedCheck.status}</span>
+    </div>
+    <div class="detail-item">
+      <span class="detail-label">비고:</span>
+      ${selectedCheck.memo || '-'}
+    </div>
+  `;
+}
+
+// 015/016/019 BLOCK : 이벤트 바인딩 (checks.html에서만 동작)
+if (checkListEl && checkDetailEl) {
+  // 검색어 입력
   if (filterKeywordInput) {
     filterKeywordInput.addEventListener('input', () => {
       filterKeyword = filterKeywordInput.value;
+      currentPage = 1; // 검색 바뀌면 1페이지로
       renderCheckList();
       renderCheckDetail();
     });
   }
 
+  // 상태 필터 변경
   if (filterStatusSelect) {
     filterStatusSelect.addEventListener('change', () => {
       filterStatus = filterStatusSelect.value;
+      currentPage = 1;
       renderCheckList();
       renderCheckDetail();
     });
   }
+
+  // 정렬 기준 변경
   if (sortOrderSelect) {
     sortOrderSelect.addEventListener('change', () => {
       sortOrder = sortOrderSelect.value;
+      currentPage = 1;
       renderCheckList();
       renderCheckDetail();
     });
   }
+
+  // 이전 페이지
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage -= 1;
+        renderCheckList();
+        renderCheckDetail();
+      }
+    });
+  }
+
+  // 다음 페이지
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener('click', () => {
+      currentPage += 1; // 범위는 renderCheckList()에서 보정
+      renderCheckList();
+      renderCheckDetail();
+    });
+  }
+
+  // 초기 렌더링
   renderCheckList();
   renderCheckDetail();
 }
@@ -406,7 +477,7 @@ const statErrorEl = document.getElementById('statError');
 
 if (statTotalEl && statNormalEl && statErrorEl) {
   // 저장된 점검 데이터 불러오기
-  let checks = getChecksWithFallback();
+  const checks = getChecksWithFallback();
 
   // 총 점검 건수
   const totalCount = checks.length;
