@@ -198,22 +198,48 @@ button {
   color: #555;
   margin-right: 4px;
 }
+/* 020-UI: 점검 목록 필터 레이아웃 */
 .filter-bar {
-  display: flex;
-  gap: 8px;
+  display: flex; /* 세로로 줄 두 개 */
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 8px;
 }
-.filter-bar input[type='text'] {
+
+/* 공통: 한 줄에 있는 요소 정렬 */
+.filter-row {
+  display: flex; /* 가로로 나열 */
+  gap: 8px;
+  align-items: center;
+}
+
+/* 1줄: 검색창이 남는 공간 꽉 채우도록 */
+.filter-row input[type='text'] {
   flex: 1;
 }
-.filter-bar select {
+
+/* 드롭다운 기본 너비 */
+.filter-row select {
   min-width: 120px;
 }
+
+/* 2줄: 왼쪽에 개수, 오른쪽에 버튼 */
+.filter-row-bottom {
+  justify-content: space-between;
+}
+
+/* 개수 표시 텍스트 */
 .check-count {
-  margin: 8px 0 4px;
-  font-size: 14px;
+  display: block;
+  font-size: 13px;
   color: #555;
 }
+
+/* 초기화 버튼은 오른쪽으로 밀착 */
+.filter-row-bottom .btnsecondary {
+  margin-left: auto;
+}
+
 .check-list .empty {
   color: #888;
   font-style: italic;
@@ -264,4 +290,16 @@ button {
 .pagination button:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.btnsecondary {
+  padding: 6px 12px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: #f5f5f5;
+  cursor: pointer;
+}
+.btnsecondary:hover {
+  background-color: #e8e8e8;
 }

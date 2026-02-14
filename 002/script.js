@@ -241,6 +241,7 @@ const filterKeywordInput = document.getElementById('filterKeyword');
 const filterStatusSelect = document.getElementById('filterStatus');
 const sortOrderSelect = document.getElementById('sortOrder');
 const checkCountEl = document.getElementById('checkCount');
+const resetChecksBtn = document.getElementById('resetChecks');
 
 const prevPageBtn = document.getElementById('prevPage');
 const nextPageBtn = document.getElementById('nextPage');
@@ -299,6 +300,11 @@ function getFilteredChecks() {
 
   return sorted;
 }
+//020 현재 로컬스토리지에 실제 데이터 있는지 여부
+function isUsingSampleChecks() {
+  const stored = loadChecks();
+  return stored.length === 0;
+}
 
 // 019 BLOCK : 페이지 정보/버튼 상태 업데이트
 function updatePagination(totalItems, totalPages) {
@@ -320,9 +326,11 @@ function renderCheckList() {
   // 1) 검색/필터/정렬이 모두 적용된 전체 목록
   const allChecks = getFilteredChecks();
 
-  // 2) 개수 표시 업데이트
+  // 2 + 020 개수표시 예시/실제 여부 라벨
   if (checkCountEl) {
-    checkCountEl.textContent = `현재 조건에 맞는 점검 ${allChecks.length}건`;
+    const dataLabel = isUsingSampleChecks() ? '(예시 데이터)' : '(저장 데이터)';
+
+    checkCountEl.textContent = `현재 조건에 맞는 점검 ${allChecks.length}건${dataLabel}`;
   }
 
   // 3) 총 페이지 수 계산 (0건이어도 최소 1페이지)
@@ -444,7 +452,20 @@ if (checkListEl && checkDetailEl) {
       renderCheckDetail();
     });
   }
-
+  //020 데이터 초기화 버튼
+  if (resetChecksBtn) {
+    resetChecksBtn.addEventListener('click', () => {
+      //confirm 브라우저 기본/확인 취소 팝업
+      const ok = confirm(
+        '저장된 점검 데이터를 모두 삭제하고 예시 데이터로 되돌릴까요?',
+      );
+      if (!ok) {
+        return;
+      }
+      localStorage.removeItem(STORAGE_KEY_CHECKS);
+      location.reload();
+    });
+  }
   // 이전 페이지
   if (prevPageBtn) {
     prevPageBtn.addEventListener('click', () => {

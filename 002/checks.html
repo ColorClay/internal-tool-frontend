@@ -6,6 +6,7 @@
     <title>점검 등록</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
+
   <body>
     <header class="header">
       <h1 class="title">시설 작업 관리 내부툴</h1>
@@ -18,23 +19,37 @@
       </nav>
       <section class="card">
         <h2 class="subtitle">점검 목록</h2>
+
+        <!-- 020-UI: 점검 목록 필터 영역 -->
         <div class="filter-bar">
-          <input type="text" id="filterKeyword" placeholder="설비명 검색" />
-          <select id="filterStatus">
-            <option value="all">전체</option>
-            <option value="normal">정상</option>
-            <option value="error">이상</option>
-            <option value="check">점검중</option>
-          </select>
-          <select id="sortOrder">
-            <option value="date-desc">날짜 최신순</option>
-            <option value="date-asc">날짜 오래된순</option>
-            <option value="name-asc">설비명 (가나다순)</option>
-          </select>
+          <!-- 1줄: 검색 + 상태 + 정렬 -->
+          <div class="filter-row">
+            <input type="text" id="filterKeyword" placeholder="설비명 검색" />
+            <select id="filterStatus">
+              <option value="all">전체</option>
+              <option value="normal">정상</option>
+              <option value="error">이상</option>
+              <option value="check">점검중</option>
+            </select>
+            <select id="sortOrder">
+              <option value="date-desc">날짜 최신순</option>
+              <option value="date-asc">날짜 오래된순</option>
+              <option value="name-asc">설비명 (가나다순)</option>
+            </select>
+          </div>
+
+          <!-- 2줄: 개수 표시 + 초기화 버튼 -->
+          <div class="filter-row filter-row-bottom">
+            <p class="check-count" id="checkCount">현재 조건에 맞는 점검 0건</p>
+            <button id="resetChecks" class="btnsecondary" type="button">
+              점검 데이터 초기화
+            </button>
+          </div>
         </div>
-        <p class="check-count" id="checkCount">현재 조건에 맞는 점검 0건</p>
+
         <ul id="checkList" class="check-list"></ul>
       </section>
+
       <div class="pagination">
         <button id="prevPage" type="button">이전</button>
         <span id="pageInfo">1 /1</span>
