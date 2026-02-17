@@ -331,14 +331,13 @@ function renderCheckList() {
 
   //022 ux개선 현재 필터 선택결과에 선택된 항목이 없으면 자동 선택 해제 +편집 종료
   if (selectedId !== null) {
-    const stillExists = allChecks.some((c) => c.id === selectedId);
-    if (!stillExists) {
+    const idx = allChecks.findIndex((c) => c.id === selectedId);
+
+    if (idx === -1) {
       selectedId = null;
       editMode = false;
       currentPage = 1;
     } else {
-      // 022-1 선택된 항목이 여전히 존재하면 해당 항목이 몇 번째인지 계산해서 그 페이지로 이동
-      const idx = allChecks.findIndex((c) => c.id === selectedId);
       // idx는 0부터 시작하므로 +1 해주고, 페이지 번호는 1부터 시작하므로 +1 해줌
       currentPage = Math.floor(idx / PAGE_SIZE) + 1;
     }
@@ -363,13 +362,23 @@ function renderCheckList() {
   // 5) 현재 페이지에 보여줄 구간 계산
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
-  const pageChecks = allChecks.slice(startIndex, endIndex);
+  let pageChecks = allChecks.slice(startIndex, endIndex);
 
+  if (pageChecks.length === 0 && currentPage > 1) {
+    currentPage -= 1;
+    const retryStart = (currentPage - 1) * PAGE_SIZE;
+    const retryEnd = retryStart + PAGE_SIZE;
+    //다시 현재 페이지 데이터 계산
+    pageChecks = allChecks.slice(retryStart, retryEnd);
+  }
   // 6) 기존 목록 비우기
   checkListEl.innerHTML = '';
 
   // 7) 결과 0건일 때 안내 멘트
   if (pageChecks.length === 0) {
+    selectedId = null;
+    editMode = false;
+
     const li = document.createElement('li');
     li.textContent = '조건에 맞는 점검이 없습니다.';
     li.classList.add('empty');
@@ -595,32 +604,15 @@ function renderCheckDetail() {
       if (usingSample) return;
       const ok = confirm('이 점검을 삭제할까요?');
       if (!ok) return;
+
       //저장 데이터에서만 삭제
       const stored = loadChecks();
       const next = stored.filter((c) => c.id !== selectedId);
       saveChecks(next);
+
       //선택 해제
       selectedId = null;
       editMode = false;
-
-      //페이지 보정
-      const allChecks = getFilteredChecks();
-      const totalPages = Math.max(1, Math.ceil(allChecks.length / PAGE_SIZE));
-
-      //페이지 보정 추가 현재 페이지가 삭제로 인해 총 페이지 수보다 커질 수 있으므로 보정
-      if (currentPage > totalPages) {
-        currentPage = totalPages;
-      }
-
-      //현재 페이지가 비어버린 경우 (예 마지막 항목을 삭제한 경우) 다시 보정
-      const startIndex = (currentPage - 1) * PAGE_SIZE;
-      const endIndex = startIndex + PAGE_SIZE;
-      const pageChecks = allChecks.slice(startIndex, endIndex);
-
-      // 022 삭제 후 현재 페이지에 항목이 하나도 남지 않았을 때 이전 페이지로 이동 (단, 1페이지는 유지)
-      if (pageChecks.length === 0) {
-        currentPage = 1;
-      }
 
       renderCheckList();
       renderCheckDetail();
@@ -636,23 +628,6 @@ if (checkListEl && checkDetailEl) {
       filterKeyword = filterKeywordInput.value;
       currentPage = 1; // 검색 바뀌면 1페이지로
       editMode = false;
-
-      const allChecks = getFilteredChecks();
-
-      //022-ux 선택된 항목이 필터 결과에 남아있으면 유지, 없으면 해제
-      if (selectedId !== null) {
-        const idx = allChecks.findIndex((c) => c.id === selectedId);
-
-        if (idx === -1) {
-          selectedId = null;
-          currentPage = 1;
-        } else {
-          currentPage = Math.floor(idx / PAGE_SIZE) + 1;
-        }
-      } else {
-        currentPage = 1;
-      }
-
       renderCheckList();
       renderCheckDetail();
     });
@@ -664,22 +639,6 @@ if (checkListEl && checkDetailEl) {
       filterStatus = filterStatusSelect.value;
       currentPage = 1;
       editMode = false;
-
-      const allChecks = getFilteredChecks();
-
-      //022-ux 선택된 항목이 필터 결과에 남아있으면 유지, 없으면 해제
-      if (selectedId !== null) {
-        const idx = allChecks.findIndex((c) => c.id === selectedId);
-        if (idx === -1) {
-          selectedId = null;
-          currentPage = 1;
-        } else {
-          currentPage = Math.floor(idx / PAGE_SIZE) + 1;
-        }
-      } else {
-        currentPage = 1;
-      }
-
       renderCheckList();
       renderCheckDetail();
     });
@@ -691,22 +650,6 @@ if (checkListEl && checkDetailEl) {
       sortOrder = sortOrderSelect.value;
       currentPage = 1;
       editMode = false;
-
-      const allChecks = getFilteredChecks();
-
-      //022-ux 선택된 항목이 필터 결과에 남아있으면 유지, 없으면 해제
-      if (selectedId !== null) {
-        const idx = allChecks.findIndex((c) => c.id === selectedId);
-        if (idx === -1) {
-          selectedId = null;
-          currentPage = 1;
-        } else {
-          currentPage = Math.floor(idx / PAGE_SIZE) + 1;
-        }
-      } else {
-        currentPage = 1;
-      }
-
       renderCheckList();
       renderCheckDetail();
     });
@@ -731,20 +674,6 @@ if (checkListEl && checkDetailEl) {
       if (currentPage > 1) {
         currentPage -= 1;
         editMode = false;
-
-        //022 페이지 이동후 현재 페이지 선택항목이 없으면 해제
-        const allChecks = getFilteredChecks();
-        const startIndex = (currentPage - 1) * PAGE_SIZE;
-        const endIndex = startIndex + PAGE_SIZE;
-        const pageChecks = allChecks.slice(startIndex, endIndex);
-
-        if (
-          selectedId !== null &&
-          !pageChecks.some((c) => c.id === selectedId)
-        ) {
-          selectedId = null;
-          editMode = false;
-        }
         renderCheckList();
         renderCheckDetail();
       }
@@ -756,17 +685,6 @@ if (checkListEl && checkDetailEl) {
     nextPageBtn.addEventListener('click', () => {
       currentPage += 1; // 범위는 renderCheckList()에서 보정
       editMode = false;
-
-      //022 페이지 이동후 현재 페이지 선택항목이 없으면 해제
-      const allChecks = getFilteredChecks();
-      const startIndex = (currentPage - 1) * PAGE_SIZE;
-      const endIndex = startIndex + PAGE_SIZE;
-      const pageChecks = allChecks.slice(startIndex, endIndex);
-
-      if (selectedId !== null && !pageChecks.some((c) => c.id === selectedId)) {
-        selectedId = null;
-        editMode = false;
-      }
       renderCheckList();
       renderCheckDetail();
     });
