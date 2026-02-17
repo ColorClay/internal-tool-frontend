@@ -323,23 +323,48 @@ let selectedId = null; // 현재 선택된 점검의 id
 // 021 점검 상세 패널 편집
 let editMode = false;
 
+// 023: 비동기 처리중 (로딩중) 상태 표시
+let isBusy = false;
+
+// 023 : 상태표시줄 dom
+const asyncStatusEl = document.getElementById('asyncStatus');
+let statusTimerId = null;
+
+// 023 : 상태표시 텍스트 찍기(함수없이 짧은 로직만)
+function setAsyncStatus(text) {
+  if (!asyncStatusEl) return;
+  asyncStatusEl.textContent = text;
+
+  //023 이전타이머가 있으면 취소(새 메세지로 갱신될때 꼬임 방지)
+  if (statusTimerId !== null) {
+    clearTimeout(statusTimerId);
+    statusTimerId = null;
+  }
+
+  //빈문자열이면 타이머를 새로 걸 필요없음
+  if (!text) return;
+
+  //3초후 자동 지우기
+  statusTimerId = setTimeout(() => {
+    if (!asyncStatusEl) return;
+    asyncStatusEl.textContent = '';
+    statusTimerId = null;
+  }, 3000);
+}
+
 function renderCheckList() {
   if (!checkListEl) return; // 다른 페이지에서 script.js 로딩될 때 방어
 
   // 1) 검색/필터/정렬이 모두 적용된 전체 목록
   const allChecks = getFilteredChecks();
 
-  //022 ux개선 현재 필터 선택결과에 선택된 항목이 없으면 자동 선택 해제 +편집 종료
+  //022/023 선택된 항목이 필터 결과에서 사라졌을떄만 선택해제
   if (selectedId !== null) {
-    const idx = allChecks.findIndex((c) => c.id === selectedId);
-
-    if (idx === -1) {
+    const stillExists = allChecks.some((c) => c.id === selectedId);
+    if (!stillExists) {
       selectedId = null;
       editMode = false;
       currentPage = 1;
-    } else {
-      // idx는 0부터 시작하므로 +1 해주고, 페이지 번호는 1부터 시작하므로 +1 해줌
-      currentPage = Math.floor(idx / PAGE_SIZE) + 1;
     }
   }
 
@@ -523,38 +548,67 @@ function renderCheckDetail() {
     }
 
     if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
+      saveBtn.addEventListener('click', async () => {
         if (usingSample) return;
+        //023 저장 버튼 작동중 중복실행 방지
+        if (isBusy) return;
 
-        const equipmentEl = document.getElementById('editEquipment');
-        const dateEl = document.getElementById('editDate');
-        const statusEl = document.getElementById('editStatus');
-        const memoEl = document.getElementById('editMemo');
+        try {
+          //isBusy 로 일단 잠그고 시작
+          isbusy = true;
+          saveBtn.disabled = true; //023 저장 버튼 잠금
+          setAsyncStatus('저장 중...');
 
-        const equipment = equipmentEl ? equipmentEl.value.trim() : '';
-        const date = dateEl ? dateEl.value : '';
-        const status = statusEl ? statusEl.value : '';
-        const memo = memoEl ? memoEl.value.trim() : '';
+          //023 서버요청처럼 보이도록 지연(600~1200ms 사이 랜덤)
+          const delay = 600 + Math.floor(Math.random() * 601);
+          await new Promise((resolve) => setTimeout(resolve, delay));
 
-        if (equipment === '') {
-          alert('설비명을 입력하세요.');
-          return;
+          //입력값 읽기
+          const equipmentEl = document.getElementById('editEquipment');
+          const dateEl = document.getElementById('editDate');
+          const statusEl = document.getElementById('editStatus');
+          const memoEl = document.getElementById('editMemo');
+
+          const equipment = equipmentEl ? equipmentEl.value.trim() : '';
+          const date = dateEl ? dateEl.value : '';
+          const status = statusEl ? statusEl.value : '';
+          const memo = memoEl ? memoEl.value.trim() : '';
+
+          //유효성 검사
+          if (equipment === '') {
+            alert('설비명을 입력하세요.');
+            return;
+          }
+          if (date === '') {
+            alert('점검일을 선택하세요.');
+            return;
+          }
+          //수정/삭제는 저장 데이터만 대상으로 해야함
+          const stored = loadChecks();
+          const next = stored.map((c) => {
+            if (c.id !== selectedId) return c;
+            return {
+              ...c,
+              equipment,
+              date,
+              status,
+              memo,
+            };
+          });
+          saveChecks(next);
+          //저장성공 후 UI갱신
+          setAsyncStatus('저장 완료');
+          editMode = false;
+          renderCheckList();
+          renderCheckDetail();
+        } catch (e) {
+          console.error(e);
+          setAsyncStatus('저장 실패: 잠시 후 다시 시도해주세요.');
+        } finally {
+          // 저장처리 작업끝나면(성공실패 상관없이) 버튼 잠금 해제
+          isBusy = false;
+          if (saveBtn) saveBtn.disabled = false;
         }
-        if (date === '') {
-          alert('점검일을 선택하세요.');
-          return;
-        }
-        //수정/삭제는 저장 데이터만 대상으로 해야함
-        const stored = loadChecks();
-        const next = stored.map((c) => {
-          if (c.id !== selectedId) return c;
-          return { ...c, equipment, date, status, memo };
-        });
-        saveChecks(next);
-
-        editMode = false;
-        renderCheckList();
-        renderCheckDetail();
       });
     }
 
@@ -600,22 +654,54 @@ function renderCheckDetail() {
     });
   }
   if (deleteBtn) {
-    deleteBtn.addEventListener('click', () => {
+    deleteBtn.addEventListener('click', async () => {
       if (usingSample) return;
+      if (isBusy) return;
+
       const ok = confirm('이 점검을 삭제할까요?');
       if (!ok) return;
 
-      //저장 데이터에서만 삭제
-      const stored = loadChecks();
-      const next = stored.filter((c) => c.id !== selectedId);
-      saveChecks(next);
+      try {
+        isBusy = true;
+        deleteBtn.disabled = true; //023 버튼 잠금
+        setAsyncStatus('삭제 중...');
 
-      //선택 해제
-      selectedId = null;
-      editMode = false;
+        //023 서버요청처럼 보이도록 지연(600~1200ms 사이 랜덤)
+        const delay = 600 + Math.floor(Math.random() * 601);
+        await new Promise((resolve) => setTimeout(resolve, delay));
 
-      renderCheckList();
-      renderCheckDetail();
+        //저장 데이터에서만 삭제
+        const stored = loadChecks();
+        const next = stored.filter((c) => c.id !== selectedId);
+        saveChecks(next);
+        //선택 해제
+        selectedId = null;
+        editMode = false;
+
+        //페이지 보정
+        const allChecksAfter = getFilteredChecks();
+        const totalPagesAfter = Math.max(
+          1,
+          Math.ceil(allChecksAfter.length / PAGE_SIZE),
+        );
+        if (currentPage > totalPagesAfter) currentPage = totalPagesAfter;
+
+        //현재 페이지가 비어버린 경우 보정
+        const startIndex = (currentPage - 1) * PAGE_SIZE;
+        const endIndex = startIndex + PAGE_SIZE;
+        const pageChecksAfter = allChecksAfter.slice(startIndex, endIndex);
+        if (pageChecksAfter.length === 0) currentPage = 1;
+
+        setAsyncStatus('삭제 완료');
+        renderCheckList();
+        renderCheckDetail();
+      } catch (e) {
+        console.error(e);
+        setAsyncStatus('삭제 실패: 잠시 후 다시 시도해주세요.');
+      } finally {
+        isBusy = false;
+        if (deleteBtn) deleteBtn.disabled = false;
+      }
     });
   }
 }
