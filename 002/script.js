@@ -555,7 +555,7 @@ function renderCheckDetail() {
 
         try {
           //isBusy 로 일단 잠그고 시작
-          isbusy = true;
+          isBusy = true;
           saveBtn.disabled = true; //023 저장 버튼 잠금
           setAsyncStatus('저장 중...');
 
@@ -607,7 +607,7 @@ function renderCheckDetail() {
         } finally {
           // 저장처리 작업끝나면(성공실패 상관없이) 버튼 잠금 해제
           isBusy = false;
-          if (saveBtn) saveBtn.disabled = false;
+          saveBtn.disabled = false;
         }
       });
     }
