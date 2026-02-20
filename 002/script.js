@@ -326,6 +326,15 @@ let editMode = false;
 // 023: 비동기 처리중 (로딩중) 상태 표시
 let isBusy = false;
 
+//025 개발모드에서만 실패 시나리오 주입
+const DEV_MODE =
+  location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+const DEV_FAIL_RATE = 0.3; //30% 실패 확률
+
+//026 변경 내역 저장실패시 작업 재시도용 버튼 및 작업용
+let lastFailedAction = null;
+let lastFailedId = null;
+
 // 023 : 상태표시줄 dom
 const asyncStatusEl = document.getElementById('asyncStatus');
 let statusTimerId = null;
@@ -595,11 +604,16 @@ function renderCheckDetail() {
           //저장성공 후 UI갱신
           setAsyncStatus('저장 완료');
           editMode = false;
+          lastFailedAction = null;
+          lastFailedId = null;
           renderCheckList();
           renderCheckDetail();
         } catch (e) {
           console.error(e);
+          lastFailedAction = 'delete';
+          lastFailedId = seclectedId;
           setAsyncStatus('저장 실패: 잠시 후 다시 시도해주세요.');
+          renderCheckDetail();
         } finally {
           // 저장처리 작업끝나면(성공실패 상관없이) 버튼 잠금 해제
           isBusy = false;
@@ -633,14 +647,36 @@ function renderCheckDetail() {
       ${selectedCheck.memo || '-'}
     </div>
     <div class="detail-actions">
+
+   
     <button type="button" id="editBtn" ${usingSample ? 'disabled' : ''}>수정</button>
     <button type="button" id="deleteBtn" ${usingSample ? 'disabled' : ''}>삭제</button>
     </div>
+
+     <!--026 변경 내역 저장 실패시 재시도 버튼 호출-->
+    ${
+      lastFailedAction === 'delete' &&
+      lastFailedId === selectedId &&
+      !usingSample
+        ? `<div class='detail-actions'>
+      <button type="button" id="retryDeleteBtn">재시도</button>
+      </div>`
+        : ''
+    }
   `;
 
   // 021 보기 모드 버튼 이벤트
   const editBtn = document.getElementById('editBtn');
   const deleteBtn = document.getElementById('deleteBtn');
+  // 026 변경내역 저장 실패시 재시도 버튼 이벤트
+  const retryDeleteBtn = document.getElementById('retryDeleteBtn');
+  if (retryDeleteBtn) {
+    retryDeleteBtn.addEventListener('click', () => {
+      if (isBusy) return;
+      //삭제 버튼 재사용
+      if (deleteBtn) deleteBtn.click();
+    });
+  }
 
   if (editBtn) {
     editBtn.addEventListener('click', () => {
@@ -660,18 +696,13 @@ function renderCheckDetail() {
       try {
         isBusy = true;
         deleteBtn.disabled = true; //023 버튼 잠금
-        //025 개발모드에서만 실패 시나이로 주입
-        const DEV_MODE =
-          location.hostname === '127.0.0.1' ||
-          location.hostname === 'localhost';
-        const DEV_FAIL_RATE = 0.3; //30% 실패 확률
         setAsyncStatus('삭제 중...');
 
         //023 서버요청처럼 보이도록 지연(600~1200ms 사이 랜덤)
         const delay = 600 + Math.floor(Math.random() * 601);
         await new Promise((resolve) => setTimeout(resolve, delay));
         //025 개발 모드에서만 30% 실패 시뮬레이션
-        if (DEV_MODE && Math.random() > DEV_FAIL_RATE) {
+        if (DEV_MODE && Math.random() < DEV_FAIL_RATE) {
           throw new Error('DEV_FAIL_DELETE');
         }
 
@@ -702,7 +733,10 @@ function renderCheckDetail() {
         renderCheckDetail();
       } catch (e) {
         console.error(e);
+        lastFailedAction = 'delete';
+        lastFailedId = selectedId;
         setAsyncStatus('삭제 실패: 잠시 후 다시 시도해주세요.');
+        renderCheckDetail();
       } finally {
         isBusy = false;
         if (deleteBtn) deleteBtn.disabled = false;
