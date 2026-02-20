@@ -559,10 +559,6 @@ function renderCheckDetail() {
           saveBtn.disabled = true; //023 저장 버튼 잠금
           setAsyncStatus('저장 중...');
 
-          //023 서버요청처럼 보이도록 지연(600~1200ms 사이 랜덤)
-          const delay = 600 + Math.floor(Math.random() * 601);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-
           //입력값 읽기
           const equipmentEl = document.getElementById('editEquipment');
           const dateEl = document.getElementById('editDate');
@@ -664,11 +660,20 @@ function renderCheckDetail() {
       try {
         isBusy = true;
         deleteBtn.disabled = true; //023 버튼 잠금
+        //025 개발모드에서만 실패 시나이로 주입
+        const DEV_MODE =
+          location.hostname === '127.0.0.1' ||
+          location.hostname === 'localhost';
+        const DEV_FAIL_RATE = 0.3; //30% 실패 확률
         setAsyncStatus('삭제 중...');
 
         //023 서버요청처럼 보이도록 지연(600~1200ms 사이 랜덤)
         const delay = 600 + Math.floor(Math.random() * 601);
         await new Promise((resolve) => setTimeout(resolve, delay));
+        //025 개발 모드에서만 30% 실패 시뮬레이션
+        if (DEV_MODE && Math.random() > DEV_FAIL_RATE) {
+          throw new Error('DEV_FAIL_DELETE');
+        }
 
         //저장 데이터에서만 삭제
         const stored = loadChecks();
