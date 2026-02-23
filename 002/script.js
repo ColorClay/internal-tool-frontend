@@ -688,6 +688,8 @@ function renderCheckDetail() {
   if (deleteBtn) {
     deleteBtn.addEventListener('click', async () => {
       if (usingSample) return;
+      // 027 예시 데이터 삭제 방지
+      if (isUsingSampleChecks()) return;
       if (isBusy) return;
 
       const ok = confirm('이 점검을 삭제할까요?');
@@ -733,10 +735,13 @@ function renderCheckDetail() {
         renderCheckDetail();
       } catch (e) {
         console.error(e);
-        lastFailedAction = 'delete';
-        lastFailedId = selectedId;
         setAsyncStatus('삭제 실패: 잠시 후 다시 시도해주세요.');
-        renderCheckDetail();
+
+        if (!usingSample && !isUsingSampleChecks()) {
+          lastFailedAction = 'delete';
+          lastFailedId = selectedId;
+          renderCheckDetail();
+        }
       } finally {
         isBusy = false;
         if (deleteBtn) deleteBtn.disabled = false;
