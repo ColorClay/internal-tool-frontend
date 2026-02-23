@@ -1,3 +1,10 @@
+//029 dev 설정 한곳에 정리
+const DEV_MODE =
+  location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+const DEV_FAIL_RATE = 0.3;
+const DEV_DELAY_MIN = 600;
+const DEV_DELAY_MAX = 1200;
+
 // 012 BLOCK 점검 데이터 저장 불러오기
 const STORAGE_KEY_CHECKS = 'checks';
 // 012-1 저장된 점검 리스트 불러오기
@@ -326,11 +333,6 @@ let editMode = false;
 // 023: 비동기 처리중 (로딩중) 상태 표시
 let isBusy = false;
 
-//025 개발모드에서만 실패 시나리오 주입
-const DEV_MODE =
-  location.hostname === '127.0.0.1' || location.hostname === 'localhost';
-const DEV_FAIL_RATE = 0.3; //30% 실패 확률
-
 //026 변경 내역 저장실패시 작업 재시도용 버튼 및 작업용
 let lastFailedAction = null;
 let lastFailedId = null;
@@ -582,7 +584,17 @@ function renderCheckDetail() {
           //isBusy 로 일단 잠그고 시작
           isBusy = true;
           saveBtn.disabled = true; //023 저장 버튼 잠금
-          setAsyncStatus('저장 중...');
+          setAsyncStatus('저장 중...', 'loading');
+
+          // 029 저장도 서버 요청처럼 보이도록 지연(600~1200ms)
+          const delay =
+            DEV_DELAY_MIN +
+            Math.floor(Math.random() * (DEV_DELAY_MAX - DEV_DELAY_MIN + 1));
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          // 029 개발 모드에서만 30% 실패 시뮬레이션
+          if (DEV_MODE && Math.random() < DEV_FAIL_RATE) {
+            throw new Error('DEV_FAIL_SAVE');
+          }
 
           //입력값 읽기
           const equipmentEl = document.getElementById('editEquipment');
@@ -622,7 +634,7 @@ function renderCheckDetail() {
           lastFailedId = null;
 
           //저장성공 후 UI갱신
-          setAsyncStatus('저장 완료');
+          setAsyncStatus('저장 완료', 'success');
           editMode = false;
 
           renderCheckList();
@@ -630,8 +642,8 @@ function renderCheckDetail() {
         } catch (e) {
           console.error(e);
           lastFailedAction = 'save';
-          lastFailedId = seclectedId;
-          setAsyncStatus('저장 실패: 잠시 후 다시 시도해주세요.');
+          lastFailedId = selectedId;
+          setAsyncStatus('저장 실패: 잠시 후 다시 시도해주세요.', 'error');
           renderCheckDetail();
         } finally {
           // 저장처리 작업끝나면(성공실패 상관없이) 버튼 잠금 해제
@@ -724,11 +736,15 @@ function renderCheckDetail() {
       try {
         isBusy = true;
         deleteBtn.disabled = true; //023 버튼 잠금
-        setAsyncStatus('삭제 중...');
+        setAsyncStatus('삭제 중...', 'loading');
 
         //023 서버요청처럼 보이도록 지연(600~1200ms 사이 랜덤)
-        const delay = 600 + Math.floor(Math.random() * 601);
+        const delay =
+          DEV_DELAY_MIN +
+          Math.floor(Math.random() * (DEV_DELAY_MAX - DEV_DELAY_MIN + 1));
+
         await new Promise((resolve) => setTimeout(resolve, delay));
+
         //025 개발 모드에서만 30% 실패 시뮬레이션
         if (DEV_MODE && Math.random() < DEV_FAIL_RATE) {
           throw new Error('DEV_FAIL_DELETE');
@@ -756,7 +772,7 @@ function renderCheckDetail() {
         const pageChecksAfter = allChecksAfter.slice(startIndex, endIndex);
         if (pageChecksAfter.length === 0) currentPage = 1;
 
-        setAsyncStatus('삭제 완료');
+        setAsyncStatus('삭제 완료', 'success');
         renderCheckList();
         renderCheckDetail();
       } catch (e) {
@@ -767,7 +783,7 @@ function renderCheckDetail() {
         } else {
           console.error(e); //진짜 에러만 error
         }
-        setAsyncStatus('삭제 실패: 잠시 후 다시 시도해주세요.');
+        setAsyncStatus('삭제 실패: 잠시 후 다시 시도해주세요.', 'error');
 
         if (!usingSample && !isUsingSampleChecks()) {
           lastFailedAction = 'delete';
