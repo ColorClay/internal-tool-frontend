@@ -175,3 +175,7 @@ BLOCK 단위(예: 004, 005, …, 012…)로 꾸준히 확장하는 방식으로 
 - BLOCK 027: 예시데이터 삭제 로직 이중 차단(안전 가드)
   - UI(disabled)뿐 아니라 코드 레벨에서도 예시데이터 상태에서 삭제 로직이 실행되지 않도록 가드 강화
   - 실패 기록(lastFailedAction/lastFailedId) 및 재시도 UI도 예시데이터에서는 생성되지 않
+
+- BLOCK 028: 저장/삭제 재시도 UX 통일 + 상태 메시지 UI 정리
+  - 저장/삭제 실패 시 lastFailedAction/lastFailedId 기반으로 재시도 버튼 제공
+  - 상태 메시지(setAsyncStatus)를 상세 카드 내부로 이동하고 로딩/성공/실패 스타일 적용

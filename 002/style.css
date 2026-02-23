@@ -317,3 +317,26 @@ button {
   gap: 8px;
   margin-top: 12px;
 }
+
+.async-status {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #e5e5e5;
+  background: #fafafa;
+  min-height: 18px;
+}
+
+.async-status.is-loading {
+  opacity: 0.9;
+}
+.async-status.is-success {
+  border-color: #cfe9d5;
+  background: #f1fbf3;
+}
+.async-status.is-error {
+  border-color: #f2c9c9;
+  background: #fff3f3;
+}

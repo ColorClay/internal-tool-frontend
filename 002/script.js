@@ -340,9 +340,15 @@ const asyncStatusEl = document.getElementById('asyncStatus');
 let statusTimerId = null;
 
 // 023 : 상태표시 텍스트 찍기(함수없이 짧은 로직만)
-function setAsyncStatus(text) {
+function setAsyncStatus(text, type = '') {
   if (!asyncStatusEl) return;
   asyncStatusEl.textContent = text;
+
+  //028 상태 클래스 리셋 후 타입 적용
+  asyncStatusEl.classList.remove('is-loading', 'is-success', 'is-error');
+  if (type === 'loading') asyncStatusEl.classList.add('is-loading');
+  if (type === 'success') asyncStatusEl.classList.add('is-success');
+  if (type === 'error') asyncStatusEl.classList.add('is-error');
 
   //023 이전타이머가 있으면 취소(새 메세지로 갱신될때 꼬임 방지)
   if (statusTimerId !== null) {
@@ -357,6 +363,7 @@ function setAsyncStatus(text) {
   statusTimerId = setTimeout(() => {
     if (!asyncStatusEl) return;
     asyncStatusEl.textContent = '';
+    asyncStatusEl.classList.remove('is-loading', 'is-success', 'is-error');
     statusTimerId = null;
   }, 3000);
 }
@@ -531,6 +538,15 @@ function renderCheckDetail() {
         </button>
         <button type="button" id="cancelBtn">취소</button>
       </div>
+      ${
+        lastFailedAction === 'save' &&
+        lastFailedId == selectedId &&
+        !usingSample
+          ? `<div class="detail-actions">
+        <button type="button" id="retrySaveBtn">재시도</button>
+        </div>`
+          : ''
+      }
     `;
 
     // select 기본값 맞추기
@@ -548,7 +564,7 @@ function renderCheckDetail() {
     // 021 버튼 이벤트(렌더 직후)
     const saveBtn = document.getElementById('saveBtn');
     const cancelBtn = document.getElementById('cancelBtn');
-
+    const retrySaveBtn = document.getElementById('retrySaveBtn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => {
         editMode = false;
@@ -601,16 +617,19 @@ function renderCheckDetail() {
             };
           });
           saveChecks(next);
+          //028 저장 성공했으니 실패 기록 초기화
+          lastFailedAction = null;
+          lastFailedId = null;
+
           //저장성공 후 UI갱신
           setAsyncStatus('저장 완료');
           editMode = false;
-          lastFailedAction = null;
-          lastFailedId = null;
+
           renderCheckList();
           renderCheckDetail();
         } catch (e) {
           console.error(e);
-          lastFailedAction = 'delete';
+          lastFailedAction = 'save';
           lastFailedId = seclectedId;
           setAsyncStatus('저장 실패: 잠시 후 다시 시도해주세요.');
           renderCheckDetail();
@@ -619,6 +638,13 @@ function renderCheckDetail() {
           isBusy = false;
           saveBtn.disabled = false;
         }
+      });
+    }
+    if (retrySaveBtn) {
+      retrySaveBtn.addEventListener('click', () => {
+        if (isBusy) return;
+        //저장 버튼 재사용
+        if (saveBtn) saveBtn.click();
       });
     }
 
@@ -735,6 +761,12 @@ function renderCheckDetail() {
         renderCheckDetail();
       } catch (e) {
         console.error(e);
+
+        if (e && e.message === 'DEV_FAIL_DELETE') {
+          console.warn(e); //028 의도된 실패는 warn으로 기록
+        } else {
+          console.error(e); //진짜 에러만 error
+        }
         setAsyncStatus('삭제 실패: 잠시 후 다시 시도해주세요.');
 
         if (!usingSample && !isUsingSampleChecks()) {
