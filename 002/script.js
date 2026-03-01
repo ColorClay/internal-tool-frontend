@@ -1,3 +1,17 @@
+//   [BLOCK 031] script.js 가상 모듈(섹션) 구조
+
+//  0) 공통: DEV 설정 / Storage Key
+//  1) 공통: Storage 유틸(load/save/add)
+//  2) 공통: 순수 함수(업무 조건 판단 등)
+//  3) PAGE: index.html (점검 등록)
+//  4) PAGE: auth.html (로그인/가드)
+//  5) PAGE: checks.html (목록/상세/수정/삭제/재시도/변경이력)
+//  6) PAGE: dashboard.html (요약 카드)
+
+//  원칙:
+//   - 새 파일 분리 대신 “섹션 분리”로 가독성 확보
+//   - 각 페이지 코드는 해당 DOM 존재 여부로만 실행(페이지 가드)
+
 //029 dev 설정 한곳에 정리
 const DEV_MODE =
   location.hostname === '127.0.0.1' || location.hostname === 'localhost';
@@ -6,6 +20,7 @@ const DEV_DELAY_MIN = 600;
 const DEV_DELAY_MAX = 1200;
 
 // 012 BLOCK 점검 데이터 저장 불러오기
+// [common] Storage Utils
 const STORAGE_KEY_CHECKS = 'checks';
 // 030 변경 이력 저장 키
 const STORAGE_KEY_AUDIT_LOGS = 'auditLogs';
@@ -44,6 +59,7 @@ function addCheck(newCheck) {
 }
 
 // index 전용 코드
+// [PAGE:index] 점검 등록
 const form = document.getElementById('checkForm');
 const messageEl = document.getElementById('message');
 
@@ -132,6 +148,7 @@ function canUserStartWork({
 }
 
 // auth 전용 코드
+// [PAGE:auth] 로그인/가드
 const userIdInput = document.getElementById('userId');
 const passwordInput = document.getElementById('password');
 const btnOrCheck = document.getElementById('btnOrCheck');
