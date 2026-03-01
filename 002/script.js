@@ -7,6 +7,9 @@ const DEV_DELAY_MAX = 1200;
 
 // 012 BLOCK 점검 데이터 저장 불러오기
 const STORAGE_KEY_CHECKS = 'checks';
+// 030 변경 이력 저장 키
+const STORAGE_KEY_AUDIT_LOGS = 'auditLogs';
+
 // 012-1 저장된 점검 리스트 불러오기
 function loadChecks() {
   const raw = localStorage.getItem(STORAGE_KEY_CHECKS);
@@ -77,12 +80,32 @@ if (form && messageEl) {
     //012 실제 점검 데이터 저장
     const displayStatus = statusLabelMap[status] ?? status;
 
-    addCheck({
+    const created = addCheck({
       equipment,
       date,
       status: displayStatus,
       memo,
     });
+    //  030 변경이력 create 기록
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_AUDIT_LOGS) || '[]';
+      const parsed = JSON.parse(raw);
+      const logs = Array.isArray(parsed) ? parsed : [];
+
+      logs.unshift({
+        ts: new Date().toISOString(),
+        action: 'create',
+        id: created.id,
+        equipment: created.equipment,
+      });
+
+      localStorage.setItem(
+        STORAGE_KEY_AUDIT_LOGS,
+        JSON.stringify(logs.slice(0, 50)),
+      );
+    } catch (e) {
+      //로그 저장 실패는 버튼 정지 기능을 하지 않음
+    }
 
     messageEl.textContent = '저장 준비 완료(테스트용 메세지)';
     messageEl.classList.remove('error');
@@ -193,6 +216,8 @@ if (
 const checkListEl = document.getElementById('checkList');
 const checkDetailEl = document.getElementById('checkDetail');
 
+// 030 변경이력 리스트 DOM
+const auditLogListEl = document.getElementById('auditLogList');
 const SAMPLE_CHECKS = [
   {
     id: 1,
@@ -427,6 +452,44 @@ function renderCheckList() {
     li.classList.add('empty');
     checkListEl.appendChild(li);
 
+    // 030 변경이력 (최근 10개) 렌더링
+    if (auditLogListEl) {
+      const raw = localStorage.getItem(STORAGE_KEY_AUDIT_LOGS) || '[]';
+      let logs = [];
+      try {
+        const parsed = JSON.parse(raw);
+        logs = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        logs = [];
+      }
+      const latest = logs.slice(0, 10);
+
+      auditLogListEl.innerHTML = '';
+      if (latest.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = '변경 이력이 없습니다.';
+        li.classList.add('audit-log-empty');
+        auditLogListEl.appendChild(li);
+      } else {
+        latest.forEach((item) => {
+          const timeText = item.ts
+            ? new Date(item.ts).toLocaleString('ko-KR')
+            : '';
+          const actionText =
+            item.action === 'create'
+              ? '등록'
+              : item.action === 'update'
+                ? '수정'
+                : item.action === 'delete'
+                  ? '삭제'
+                  : item.action;
+
+          const li = document.createElement('li');
+          li.textContent = `${timeText} | ${actionText} | ${item.id} | ${item.equipment}`;
+          auditLogListEl.appendChild(li);
+        });
+      }
+    }
     updatePagination(allChecks.length, totalPages);
     return;
   }
@@ -450,7 +513,44 @@ function renderCheckList() {
 
     checkListEl.appendChild(li);
   });
+  // 030 변경이력 (최근 10개) 렌더링
+  if (auditLogListEl) {
+    const raw = localStorage.getItem(STORAGE_KEY_AUDIT_LOGS) || '[]';
+    let logs = [];
+    try {
+      const parsed = JSON.parse(raw);
+      logs = Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      logs = [];
+    }
+    const latest = logs.slice(0, 10);
 
+    auditLogListEl.innerHTML = '';
+    if (latest.length === 0) {
+      const li = document.createElement('li');
+      li.textContent = '변경 이력이 없습니다.';
+      li.classList.add('audit-log-empty');
+      auditLogListEl.appendChild(li);
+    } else {
+      latest.forEach((item) => {
+        const timeText = item.ts
+          ? new Date(item.ts).toLocaleString('ko-KR')
+          : '';
+        const actionText =
+          item.action === 'create'
+            ? '등록'
+            : item.action === 'update'
+              ? '수정'
+              : item.action === 'delete'
+                ? '삭제'
+                : item.action;
+
+        const li = document.createElement('li');
+        li.textContent = `${timeText} | ${actionText} | ${item.id} | ${item.equipment}`;
+        auditLogListEl.appendChild(li);
+      });
+    }
+  }
   // 9) 페이지 정보/버튼 상태 갱신
   updatePagination(allChecks.length, totalPages);
 }
@@ -542,7 +642,7 @@ function renderCheckDetail() {
       </div>
       ${
         lastFailedAction === 'save' &&
-        lastFailedId == selectedId &&
+        lastFailedId === selectedId &&
         !usingSample
           ? `<div class="detail-actions">
         <button type="button" id="retrySaveBtn">재시도</button>
@@ -629,6 +729,27 @@ function renderCheckDetail() {
             };
           });
           saveChecks(next);
+
+          //030 변경이력 update 기록
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY_AUDIT_LOGS) || '[]';
+            const parsed = JSON.parse(raw);
+            const logs = Array.isArray(parsed) ? parsed : [];
+
+            logs.unshift({
+              ts: new Date().toISOString(),
+              action: 'update',
+              id: selectedId,
+              equipment,
+            });
+
+            localStorage.setItem(
+              STORAGE_KEY_AUDIT_LOGS,
+              JSON.stringify(logs.slice(0, 50)),
+            );
+          } catch (e) {
+            //로그 저장 실패는 버튼 정지 기능을 하지 않음
+          }
           //028 저장 성공했으니 실패 기록 초기화
           lastFailedAction = null;
           lastFailedId = null;
@@ -754,6 +875,26 @@ function renderCheckDetail() {
         const stored = loadChecks();
         const next = stored.filter((c) => c.id !== selectedId);
         saveChecks(next);
+        //030 변경이력 delete 기록
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY_AUDIT_LOGS) || '[]';
+          const parsed = JSON.parse(raw);
+          const logs = Array.isArray(parsed) ? parsed : [];
+
+          logs.unshift({
+            ts: new Date().toISOString(),
+            action: 'delete',
+            id: selectedId,
+            equipment: selectedCheck.equipment,
+          });
+          localStorage.setItem(
+            STORAGE_KEY_AUDIT_LOGS,
+            JSON.stringify(logs.slice(0, 50)),
+          );
+        } catch (e) {
+          //로그 저장 실패는 버튼 정지 기능을 하지 않음
+        }
+
         //선택 해제
         selectedId = null;
         editMode = false;
