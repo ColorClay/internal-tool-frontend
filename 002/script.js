@@ -22,28 +22,34 @@ const DEV_DELAY_MAX = 1200;
 // 012 BLOCK 점검 데이터 저장 불러오기
 // [common] Storage Utils
 const STORAGE_KEY_CHECKS = 'checks';
+
 // 030 변경 이력 저장 키
 const STORAGE_KEY_AUDIT_LOGS = 'auditLogs';
 
 // 012-1 저장된 점검 리스트 불러오기
-function loadChecks() {
-  const raw = localStorage.getItem(STORAGE_KEY_CHECKS);
-  if (!raw) {
-    return [];
-  }
+function loadChecks(storageKey = STORAGE_KEY_CHECKS, label = '점검') {
+  const raw = localStorage.getItem(storageKey);
+  if (!raw) return [];
 
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
-    console.error('점검 데이터 읽기 실패', e);
+    console.error(`${label} 데이터 읽기 실패`, e);
     return [];
   }
 }
 // 012-2 점검 리스트 전체 저장하기
-function saveChecks(checks) {
-  localStorage.setItem(STORAGE_KEY_CHECKS, JSON.stringify(checks));
+function saveChecks(items, storageKey = STORAGE_KEY_CHECKS, label = '점검') {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(items));
+    return true;
+  } catch (e) {
+    console.error(`${label} 데이터 저장 실패`, e);
+    return false;
+  }
 }
+
 // 012-3 새 점검 추가하기
 function addCheck(newCheck) {
   const checks = loadChecks();
@@ -93,6 +99,7 @@ if (form && messageEl) {
       messageEl.classList.add('error');
       return;
     }
+
     //012 실제 점검 데이터 저장
     const displayStatus = statusLabelMap[status] ?? status;
 
@@ -102,11 +109,10 @@ if (form && messageEl) {
       status: displayStatus,
       memo,
     });
+
     //  030 변경이력 create 기록
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_AUDIT_LOGS) || '[]';
-      const parsed = JSON.parse(raw);
-      const logs = Array.isArray(parsed) ? parsed : [];
+      const logs = loadChecks(STORAGE_KEY_AUDIT_LOGS, '변경 이력');
 
       logs.unshift({
         ts: new Date().toISOString(),
@@ -115,12 +121,9 @@ if (form && messageEl) {
         equipment: created.equipment,
       });
 
-      localStorage.setItem(
-        STORAGE_KEY_AUDIT_LOGS,
-        JSON.stringify(logs.slice(0, 50)),
-      );
+      saveChecks(logs.slice(0, 50), STORAGE_KEY_AUDIT_LOGS, '변경 이력');
     } catch (e) {
-      //로그 저장 실패는 버튼 정지 기능을 하지 않음
+      // 로그 저장 실패는 버튼 정지 기능을 하지 않음
     }
 
     messageEl.textContent = '저장 준비 완료(테스트용 메세지)';
@@ -384,9 +387,21 @@ const asyncStatusEl = document.getElementById('asyncStatus');
 let statusTimerId = null;
 
 // 023 : 상태표시 텍스트 찍기(함수없이 짧은 로직만)
-function setAsyncStatus(text, type = '') {
+// 033 : 에러 로깅 중복 제거
+function setAsyncStatus(text, type = '', err = null, context = '') {
   if (!asyncStatusEl) return;
   asyncStatusEl.textContent = text;
+
+  //033 공통 에러 로깅(중복 제거)
+  if (err) {
+    const ctx = context ? `[${context}] ` : '';
+    // DEV에서 의도된 실패는 warn, 그 외는 error
+    if (err && err.message && err.message.startsWith('DEV_FAIL_')) {
+      console.warn(`${ctx}${err.message}`, err);
+    } else {
+      console.error(`${ctx}error`, err);
+    }
+  }
 
   //028 상태 클래스 리셋 후 타입 적용
   asyncStatusEl.classList.remove('is-loading', 'is-success', 'is-error');
@@ -749,9 +764,7 @@ function renderCheckDetail() {
 
           //030 변경이력 update 기록
           try {
-            const raw = localStorage.getItem(STORAGE_KEY_AUDIT_LOGS) || '[]';
-            const parsed = JSON.parse(raw);
-            const logs = Array.isArray(parsed) ? parsed : [];
+            const logs = loadChecks(STORAGE_KEY_AUDIT_LOGS, '변경 이력');
 
             logs.unshift({
               ts: new Date().toISOString(),
@@ -760,13 +773,11 @@ function renderCheckDetail() {
               equipment,
             });
 
-            localStorage.setItem(
-              STORAGE_KEY_AUDIT_LOGS,
-              JSON.stringify(logs.slice(0, 50)),
-            );
+            saveChecks(logs.slice(0, 50), STORAGE_KEY_AUDIT_LOGS, '변경 이력');
           } catch (e) {
-            //로그 저장 실패는 버튼 정지 기능을 하지 않음
+            // 로그 저장 실패는 버튼 정지 기능을 하지 않음
           }
+
           //028 저장 성공했으니 실패 기록 초기화
           lastFailedAction = null;
           lastFailedId = null;
@@ -778,10 +789,14 @@ function renderCheckDetail() {
           renderCheckList();
           renderCheckDetail();
         } catch (e) {
-          console.error(e);
           lastFailedAction = 'save';
           lastFailedId = selectedId;
-          setAsyncStatus('저장 실패: 잠시 후 다시 시도해주세요.', 'error');
+          setAsyncStatus(
+            '저장 실패: 잠시 후 다시 시도해주세요.',
+            'error',
+            e,
+            'save',
+          );
           renderCheckDetail();
         } finally {
           // 저장처리 작업끝나면(성공실패 상관없이) 버튼 잠금 해제
@@ -892,11 +907,10 @@ function renderCheckDetail() {
         const stored = loadChecks();
         const next = stored.filter((c) => c.id !== selectedId);
         saveChecks(next);
+
         //030 변경이력 delete 기록
         try {
-          const raw = localStorage.getItem(STORAGE_KEY_AUDIT_LOGS) || '[]';
-          const parsed = JSON.parse(raw);
-          const logs = Array.isArray(parsed) ? parsed : [];
+          const logs = loadChecks(STORAGE_KEY_AUDIT_LOGS, '변경 이력');
 
           logs.unshift({
             ts: new Date().toISOString(),
@@ -904,12 +918,10 @@ function renderCheckDetail() {
             id: selectedId,
             equipment: selectedCheck.equipment,
           });
-          localStorage.setItem(
-            STORAGE_KEY_AUDIT_LOGS,
-            JSON.stringify(logs.slice(0, 50)),
-          );
+
+          saveChecks(logs.slice(0, 50), STORAGE_KEY_AUDIT_LOGS, '변경 이력');
         } catch (e) {
-          //로그 저장 실패는 버튼 정지 기능을 하지 않음
+          // 로그 저장 실패는 버튼 정지 기능을 하지 않음
         }
 
         //선택 해제
@@ -934,14 +946,12 @@ function renderCheckDetail() {
         renderCheckList();
         renderCheckDetail();
       } catch (e) {
-        console.error(e);
-
-        if (e && e.message === 'DEV_FAIL_DELETE') {
-          console.warn(e); //028 의도된 실패는 warn으로 기록
-        } else {
-          console.error(e); //진짜 에러만 error
-        }
-        setAsyncStatus('삭제 실패: 잠시 후 다시 시도해주세요.', 'error');
+        setAsyncStatus(
+          '삭제 실패: 잠시 후 다시 시도해주세요.',
+          'error',
+          e,
+          'delete',
+        );
 
         if (!usingSample && !isUsingSampleChecks()) {
           lastFailedAction = 'delete';
